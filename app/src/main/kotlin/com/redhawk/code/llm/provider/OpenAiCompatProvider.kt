@@ -89,39 +89,41 @@ class OpenAiCompatProvider(
 
             override fun onClosed(es: EventSource) { trySend(LlmEvent.Done); close() }
 
-            private fun parseChunk(data: String): LlmEvent? = try {
-                val obj = json.parseToJsonElement(data).jsonObject
-                val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
-                val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
-                val delta = choice["delta"]?.jsonObject
+            private fun parseChunk(data: String): LlmEvent? {
+                return try {
+                    val obj = json.parseToJsonElement(data).jsonObject
+                    val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
+                    val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
+                    val delta = choice["delta"]?.jsonObject
 
-                // Tool call parçası mı? (id/name ilk parçada, arguments parça parça gelir)
-                val tc = delta?.get("tool_calls")?.jsonArray?.firstOrNull()?.jsonObject
-                if (tc != null) {
-                    sawToolCall = true
-                    tc["id"]?.jsonPrimitive?.contentOrNull
-                        ?.takeIf { it.isNotBlank() }?.let { toolId = it }
-                    val fn = tc["function"]?.jsonObject
-                    fn?.get("name")?.jsonPrimitive?.contentOrNull
-                        ?.takeIf { it.isNotBlank() }?.let { toolName = it }
-                    fn?.get("arguments")?.jsonPrimitive?.contentOrNull
-                        ?.let { toolArgs.append(it) }
-                }
+                    // Tool call parçası mı? (id/name ilk parçada, arguments parça parça gelir)
+                    val tc = delta?.get("tool_calls")?.jsonArray?.firstOrNull()?.jsonObject
+                    if (tc != null) {
+                        sawToolCall = true
+                        tc["id"]?.jsonPrimitive?.contentOrNull
+                            ?.takeIf { it.isNotBlank() }?.let { toolId = it }
+                        val fn = tc["function"]?.jsonObject
+                        fn?.get("name")?.jsonPrimitive?.contentOrNull
+                            ?.takeIf { it.isNotBlank() }?.let { toolName = it }
+                        fn?.get("arguments")?.jsonPrimitive?.contentOrNull
+                            ?.let { toolArgs.append(it) }
+                    }
 
-                if (finish == "tool_calls" && sawToolCall) {
-                    sawToolCall = false
-                    return LlmEvent.ToolCallRequested(
-                        ToolCall(
-                            id = toolId ?: "call_${System.currentTimeMillis()}",
-                            name = toolName ?: "",
-                            argumentsJson = toolArgs.toString().ifBlank { "{}" }
+                    if (finish == "tool_calls" && sawToolCall) {
+                        sawToolCall = false
+                        return LlmEvent.ToolCallRequested(
+                            ToolCall(
+                                id = toolId ?: "call_${System.currentTimeMillis()}",
+                                name = toolName ?: "",
+                                argumentsJson = toolArgs.toString().ifBlank { "{}" }
+                            )
                         )
-                    )
-                }
+                    }
 
-                val content = delta?.get("content")?.jsonPrimitive?.contentOrNull
-                if (!content.isNullOrEmpty()) LlmEvent.TextDelta(content) else null
-            } catch (_: Exception) { null }
+                    val content = delta?.get("content")?.jsonPrimitive?.contentOrNull
+                    if (!content.isNullOrEmpty()) LlmEvent.TextDelta(content) else null
+                } catch (_: Exception) { null }
+            }
         }
 
         val es = EventSources.createFactory(client).newEventSource(reqB.build(), listener)
