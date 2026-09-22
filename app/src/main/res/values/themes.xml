@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RedHawk.Starting" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/redhawk_bg</item>
+        <item name="android:statusBarColor">@color/redhawk_bg</item>
+        <item name="android:navigationBarColor">@color/redhawk_bg</item>
+    </style>
+    <style name="Theme.RedHawk" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/redhawk_bg</item>
+        <item name="android:statusBarColor">@color/redhawk_bg</item>
+        <item name="android:navigationBarColor">@color/redhawk_bg</item>
+    </style>
+</resources>
