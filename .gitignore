@@ -44,3 +44,11 @@ cpp/
 
 # Logs
 *.log
+
+# Native (kullanılmıyor)
+*.a
+*.so
+*.o
+cpp/
+jniLibs/
+obj/
