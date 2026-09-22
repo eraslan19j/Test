@@ -65,6 +65,9 @@ class OpenAiCompatProvider(
             val toolArgs = StringBuilder()
             var sawToolCall = false
             var gotFirst = false
+            // Düşünme modeli köprüsü: reasoning_content → <think> etiketi
+            var thinkOpen = false
+            var thinkClosed = false
 
             override fun onEvent(es: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") { trySend(LlmEvent.Done); close(); return }
@@ -128,8 +131,30 @@ class OpenAiCompatProvider(
                         )
                     }
 
+                    // Düşünme modelleri (DeepSeek R1/QwQ vb): reasoning_content
+                    // gelirse <think> bloğu aç, düşünme panelinde gösterilsin.
+                    // (Yok sayılırsa model dakikalarca "…" gibi görünürdü.)
+                    val reasoning = delta?.get("reasoning_content")
+                        ?.jsonPrimitive?.contentOrNull
+                        ?: delta?.get("reasoning")?.jsonPrimitive?.contentOrNull
+                    if (!reasoning.isNullOrEmpty()) {
+                        if (!thinkOpen) {
+                            thinkOpen = true
+                            trySend(LlmEvent.TextDelta("<think>"))
+                        }
+                        return LlmEvent.TextDelta(reasoning)
+                    }
+
                     val content = delta?.get("content")?.jsonPrimitive?.contentOrNull
-                    if (!content.isNullOrEmpty()) LlmEvent.TextDelta(content) else null
+                    if (!content.isNullOrEmpty()) {
+                        if (thinkOpen && !thinkClosed) {
+                            thinkClosed = true
+                            trySend(LlmEvent.TextDelta("</think>"))
+                        }
+                        return LlmEvent.TextDelta(content)
+                    } else {
+                        return null
+                    }
                 } catch (_: Exception) { null }
             }
         }

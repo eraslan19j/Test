@@ -37,9 +37,6 @@ fun AppDrawer(
             DrawerItem("Sağlayıcılar", Icons.Outlined.Memory, "providers"),
             DrawerItem("Yeni Sağlayıcı", Icons.Outlined.Add, "provider_setup"),
         ),
-        "ARAÇLAR" to listOf(
-            DrawerItem("Ücretsiz Araçlar", Icons.Outlined.Build, "tools"),
-        ),
         "SİSTEM" to listOf(
             DrawerItem("Ayarlar", Icons.Outlined.Settings, "settings"),
         ),

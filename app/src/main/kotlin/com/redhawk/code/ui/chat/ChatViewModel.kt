@@ -436,6 +436,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                             lastParsedThinking, lastParsedResponse)
                         runCatching { repo.updateMessageContent(assistantMsg.id, finalCombined) }
                         runCatching { repo.touch(chatId) }
+                        // Akış bitti ama metin yoksa sessiz "…" yerine net uyarı ver
+                        if (finalCombined.isBlank() && !stopRequested && !quotaFailed &&
+                            _state.value.error == null
+                        ) {
+                            _state.update { it.copy(error = "Model boş yanıt döndü. Başka model dene.") }
+                        }
                     }
 
                     val total = System.currentTimeMillis() - streamingStartedAt

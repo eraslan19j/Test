@@ -317,12 +317,38 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                     .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                Text(
-                    text = m.content.ifEmpty { "…" },
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = FontFamily.SansSerif,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (m.content.isEmpty() && m.streaming) {
+                    // Animasyonlu "yazıyor" göstergesi (statik "…" yerine)
+                    val inf = rememberInfiniteTransition(label = "typing")
+                    val ph by inf.animateFloat(0f, 3f,
+                        infiniteRepeatable(tween(1200, easing = LinearEasing),
+                            RepeatMode.Restart),
+                        label = "ph")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        repeat(3) { i ->
+                            val a = 0.25f + 0.75f *
+                                (0.5f + 0.5f * kotlin.math.sin((ph - i) * 2.094f))
+                            Box(
+                                Modifier.size(8.dp).clip(CircleShape)
+                                    .background(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = a)
+                                    )
+                            )
+                            if (i < 2) Spacer(Modifier.width(6.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text("yazıyor…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Text(
+                        text = m.content.ifEmpty { "⚠ Model boş yanıt döndü" },
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.SansSerif,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
 

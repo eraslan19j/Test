@@ -105,6 +105,23 @@ object ProviderCatalog {
         ),
         ProviderTemplate(
             type = "openai_compat",
+            displayName = "KiraAI",
+            defaultBaseUrl = "https://kiraai.vn/api/v1",
+            defaultModel = "kira-3.5-flash",
+            requiresKey = true,
+            keyUrl = "https://kiraai.vn/developer/",
+            isFree = false,
+            freeHint = "",
+            description = "ÜCRETLİ ANAHTAR · Kira 3.5/2.5 (OpenAI uyumlu)",
+            availableModels = listOf(
+                "kira-3.5-flash",
+                "kira-3.5-pro",
+                "kira-2.5-flash",
+                "kira-2.5-pro"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
             displayName = "Groq",
             defaultBaseUrl = "https://api.groq.com/openai/v1",
             defaultModel = "openai/gpt-oss-120b",
