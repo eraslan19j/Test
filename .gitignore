@@ -1,0 +1,46 @@
+# Gradle
+.gradle/
+build/
+*/build/
+gradle-app.setting
+.gradletasknamecache
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.acside/
+*.hprof
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+.kotlin/
+
+# Native (local model artıkları)
+*.a
+*.so
+obj/
+jniLibs/
+cpp/
+
+# Keystore
+*.jks
+*.keystore
+
+# Logs
+*.log
