@@ -216,9 +216,13 @@ private fun HomeBackground() {
 
 @Composable
 private fun HomeCard(item: HomeItem) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Surface(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-            .clickable { item.onClick() },
+            .clickable {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                item.onClick()
+            },
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp
     ) {

@@ -20,56 +20,59 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 
 ## Yapıldı
 
-### v0.2 – v0.7.1 (özet)
-- [x] Ajan Faz 1+2 (dosya + web araçları, yazma onayı, SAF klasör)
-- [x] Kartal ikon her yerde, animasyonlu ana ekran, balon cilası
-- [x] 15 sağlayıcı kartı (~60 model), otomatik kota geçişi
-- [x] Sessiz "…"nın 4 sebebi kapatıldı (SSE hata zarfı, sıfır-olay
-      koruması, reasoning köprüsü, boş-yanıt bekçisi) + canlı sayaç
-- [x] Duck.ai (anahtarsız, deneysel), NVIDIA, Z.ai, Atria, KiraAI
+### v0.2 – v0.8 (özet)
+- [x] Ajan Faz 1+2, kartal ikon, animasyonlu ana ekran, balon cilası
+- [x] 15 sağlayıcı kartı, otomatik kota geçişi, sessiz "…" ölü
+- [x] Duck.ai, NVIDIA, Z.ai, Atria, KiraAI, dil seçeneği (TR/EN/Oto)
+- [x] Düşünme sızıntı fix'i + dosya-kartı düşünme paneli
 
-### v0.8 — Dil Seçeneği + Düşünme Sızıntısı Fix + Dosya Paneli
-- [x] Yanıt dili ayarı (Türkçe / English / Otomatik) → sistem
-      promptuna direktif olarak eklenir, sohbete anında uygulanır
-- [x] Varsayılan sistem promptu düzgün Türkçeye çevrildi
-- [x] KRİTİK FIX: açılışsız kapanış etiketi (</think> tek başına)
-      artık yakalanıyor — düşünme cevaba sızmaz
-- [x] Güvenlik ağı: yanıta sızmış tüm etiket artıkları temizlenir
-- [x] Düşünme paneli dosya-kartı tarzına çevrildi (klasör ikonu,
-      giriş animasyonu, kırmızı zaman çizgisi)
+### v0.9 — Yüksek Tokenlılar + Premium Dokunuşlar
+- [x] Dahl preset (100M token/anahtar, MiniMax-M2.7, doğrulandı)
+- [x] NaraRouter preset (günde 7M, 30+ model, doğrulandı)
+- [x] LLM7 preset (ANAHTARSIZ turbo: DeepSeek V4, GLM 5.3,
+      Codestral — /v1/models'tan doğrulandı)
+- [x] OVH preset (ANAHTARSIZ: gpt-oss, Qwen3, Llama-3.3-70B,
+      Mistral — /v1/models'tan doğrulandı)
+- [x] Dokunsal premium: gönder/durdur + ana ekran kartları titreşimli
+- [x] Akan balonda nabız gibi atan parlama çerçevesi
+      (bitince animasyon durur, pil/CPU dostu)
+- [x] Asistan kopyalamada "Kopyalandı" bildirimi
+- [x] EKLENMEYENLER (gerekçeli): Aion (OpenAI-uyumsuz özel API),
+      LongCat (kota doğrulanamadı), Kilo (uç yolu uyumsuz),
+      Tencent/Baidu/Spark (Çin kimlik onayı + özel API),
+      Copilot köprüsü (MS oturumu gerekir), Puter (user-pays JS),
+      MonkeyCode (REST API değil), APmix/AnyModel/Token-Free
+      (doğrulanabilir doküman yok)
 
-## Bilinen doğrular (ekran görüntülerinden)
+## Ücretsiz AI gerçekleri (araştırma notu)
 
-- Küçük modeller (kira-mini vb.) İNGİLİZCE DÜŞÜNÜR — bu normaldir,
-  referans uygulamada da düşünme İngilizcedir. Dil ayarı CEVABI
-  garanti eder; paneldeki düşünme İngilizce kalabilir.
-- Pollinations artık hesap+kredi istiyor (anahtarsız öldü). Bedava
-  deneme için: Duck.ai veya KiraAI kira-mini-1.0 (anahtarlı).
+- Doğrulama kuralı: /v1/models veya resmi docs görülmeden preset YOK.
+  Model ID'si tahmin edilmez (Dahl docs'un kendi uyarısı).
+- Anahtarsız üçlü: LLM7 (~10/dk turbo), OVH (~2/dk/model),
+  Duck.ai (deneysel). Pollinations anahtarsız öldü (kredi istiyor).
+- Yüksek tokenlı anahtarlılar: Dahl (100M/anahtar), NaraRouter
+  (7M/gün), Atria (100M kampanya), KiraAI kira-mini-1.0.
+- Strateji değişmedi: birden fazla ücretsiz ekle, kota biten
+  otomatik diğerine geçsin.
 
 ## Sıradaki (referans uygulamadan — önerilen sıra)
 
-### v0.9 — Dosya Gezgini + Editör (referans: Dosyalar, Editör)
+### v0.10 — Dosya Gezgini + Editör
 - [ ] Ajan deposunu uygulamada gör/düzenle (gezgin + metin editörü)
 - [ ] write_file için diff önizleme + `delete_file` aracı (onaylı)
 
-### v1.0 — Terminal + Proje (referans: Agent Terminali, Proje seç)
-- [ ] Kısıtlı komut çalıştırma (onaylı) + proje kökü seçimi
+### v1.0 — Terminal + Proje + Kurallar
+- [ ] Kısıtlı komut çalıştırma (onaylı), proje kökü, redhawk.json
 
-### v1.1 — Kurallar + Yapılandırma (referans: Kurallar, redhawk.json)
-- [ ] redhawk.json proje kuralları + Skills referans ekranı
-
-### v1.2 — Entegrasyonlar (referans: GitHub, MCP, SSH, ADB)
-- [ ] Git (commit/geri al), GitHub depoları, MCP sunucuları,
-      SSH anahtarları, ADB yapılandırması
-
-### v1.3 — Gelir (referans: Abonelik Pro)
-- [ ] AdMob + Play Billing Pro (anahtarsız hazır model + reklamsız)
+### v1.1 — Entegrasyonlar + Gelir
+- [ ] Git/GitHub, MCP, SSH, ADB + AdMob/Pro
 
 ## Test listesi (AndroidIDE build sonrası)
 
 1. Build başarılı
-2. KiraAI kira-mini-1.0 → "merhaba" → cevap SADECE Türkçe,
-   balonda İngilizce düşünme + </think> YOK
-3. Düşünme paneli dosya-kartı görünümünde, açılır-kapanır
-4. Ayarlar → Yanıt dili → English → cevap İngilizce
-5. Ayarlar → Yanıt dili → Otomatik → model serbest
+2. LLM7 ekle (anahtarsız) → DeepSeek-V4-Flash-0731 ile sohbet
+3. OVH ekle (anahtarsız) → gpt-oss-20b ile sohbet
+4. Dahl ekle (100M anahtar) → sohbet et
+5. NaraRouter ekle (Google kaydı) → sohbet et
+6. Gönder/durdur + kart dokunuşlarında titreşim
+7. Akan balonda parlama çerçevesi atıyor mu

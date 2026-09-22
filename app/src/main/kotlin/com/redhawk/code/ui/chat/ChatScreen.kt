@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -47,6 +48,7 @@ fun ChatScreen(
     val ctx = LocalContext.current
     var showQuickActions by remember { mutableStateOf(false) }
     var showModelPicker by remember { mutableStateOf(false) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
     // Proje klasörü seçici (SAF): kalıcı okuma/yazma izni alınır
     val folderPicker = rememberLauncherForActivityResult(
@@ -202,13 +204,19 @@ fun ChatScreen(
                     label = "sb"
                 ) { mode ->
                     when (mode) {
-                        "stop" -> FilledIconButton(onClick = vm::stop) {
+                        "stop" -> FilledIconButton(onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            vm.stop()
+                        }) {
                             Icon(Icons.Filled.Stop, "Durdur")
                         }
                         "mic" -> FilledIconButton(onClick = { }) {
                             Icon(Icons.Outlined.Mic, "Sesli")
                         }
-                        else -> FilledIconButton(onClick = vm::send) {
+                        else -> FilledIconButton(onClick = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            vm.send()
+                        }) {
                             Icon(Icons.Filled.Send, "Gönder")
                         }
                     }
@@ -320,12 +328,28 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                 topStart = 4.dp, topEnd = 16.dp,
                 bottomStart = 16.dp, bottomEnd = 16.dp
             )
+            // Akışta nabız gibi atan parlama çerçevesi (bitince maliyet sıfır)
+            var glowA = 0.5f
+            if (m.streaming) {
+                val gi = rememberInfiniteTransition(label = "glow")
+                glowA = gi.animateFloat(0.25f, 0.6f,
+                    infiniteRepeatable(tween(900, easing = FastOutSlowInEasing),
+                        RepeatMode.Reverse),
+                    label = "ga").value
+            }
             Box(
                 Modifier.widthIn(max = 330.dp)
                     .background(
                         if (m.streaming) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                         else MaterialTheme.colorScheme.surfaceVariant,
                         bubbleShape
+                    )
+                    .then(
+                        if (m.streaming) Modifier.border(
+                            1.5.dp,
+                            MaterialTheme.colorScheme.primary.copy(alpha = glowA),
+                            bubbleShape
+                        ) else Modifier
                     )
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
@@ -385,6 +409,8 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                 MsgAction(Icons.Outlined.ContentCopy) {
                     (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                         .setPrimaryClip(ClipData.newPlainText("chat", m.content))
+                    android.widget.Toast.makeText(ctx, "Kopyalandı",
+                        android.widget.Toast.LENGTH_SHORT).show()
                 }
                 MsgAction(Icons.Outlined.Share) {
                     val i = Intent(Intent.ACTION_SEND).apply {

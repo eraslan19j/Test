@@ -147,6 +147,71 @@ object ProviderCatalog {
         ),
         ProviderTemplate(
             type = "openai_compat",
+            displayName = "LLM7",
+            defaultBaseUrl = "https://api.llm7.io/v1",
+            defaultModel = "DeepSeek-V4-Flash-0731",
+            requiresKey = false,
+            keyUrl = "https://token.llm7.io",
+            isFree = true,
+            freeHint = "Anahtar gerekmez — dakikada ~10 istek (turbo)",
+            description = "ANAHTARSIZ · DeepSeek V4 + GLM 5.3 + Codestral",
+            availableModels = listOf(
+                "DeepSeek-V4-Flash-0731",
+                "GLM-5.3-Flash",
+                "codestral-latest"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "OVH",
+            defaultBaseUrl = "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+            defaultModel = "gpt-oss-20b",
+            requiresKey = false,
+            keyUrl = "",
+            isFree = true,
+            freeHint = "Anahtar gerekmez — model başına ~2 istek/dk",
+            description = "ANAHTARSIZ · Qwen/Llama/gpt-oss (AB sunucuları)",
+            availableModels = listOf(
+                "gpt-oss-20b",
+                "gpt-oss-120b",
+                "Qwen3-Coder-30B-A3B-Instruct",
+                "Qwen3.8-27B",
+                "Meta-Llama-3_3-70B-Instruct",
+                "Mistral-Small-3.2-24B-Instruct-2506",
+                "Mistral-Nemo-Instruct-2407"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "Dahl",
+            defaultBaseUrl = "https://inference.dahl.global/v1",
+            defaultModel = "MiniMaxAI/MiniMax-M2.7",
+            requiresKey = true,
+            keyUrl = "https://inference.dahl.global",
+            isFree = true,
+            freeHint = "Anahtar başına 100M token (ücretsiz kayıt)",
+            description = "100M TOKEN · MiniMax M2.7 (OpenAI uyumlu)",
+            availableModels = listOf(
+                "MiniMaxAI/MiniMax-M2.7"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "NaraRouter",
+            defaultBaseUrl = "https://router.bynara.id/v1",
+            defaultModel = "claude-sonnet-4.5",
+            requiresKey = true,
+            keyUrl = "https://router.bynara.id/register",
+            isFree = true,
+            freeHint = "Günde 7M token (Google ile kayıt)",
+            description = "GÜNLÜK 7M · 30+ model yönlendirme",
+            availableModels = listOf(
+                "claude-sonnet-4.5",
+                "qwen-3.8-max-free"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
             displayName = "Groq",
             defaultBaseUrl = "https://api.groq.com/openai/v1",
             defaultModel = "openai/gpt-oss-120b",
