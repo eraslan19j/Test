@@ -44,6 +44,7 @@ fun SettingsScreen(
     val suggested by prefs.suggestedPrompts.collectAsState(initial = true)
     val temperature by prefs.temperature.collectAsState(initial = 0.7f)
     val maxTokens by prefs.maxTokens.collectAsState(initial = 2048)
+    val responseLang by prefs.responseLang.collectAsState(initial = "tr")
     val systemPrompt by prefs.systemPrompt.collectAsState(
         initial = PrefsStore.DEFAULT_SYSTEM_PROMPT
     )
@@ -79,6 +80,37 @@ fun SettingsScreen(
                 "Yapay zekanın temel talimatı — sohbete anında uygulanır",
                 trailingText = "Düzenle",
                 onClick = { showPromptDialog = true })
+
+            // Yanıt dili: Türkçe / English / Otomatik
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Translate, null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Yanıt dili", fontWeight = FontWeight.Medium)
+                    Text("AI'nın cevap dili — sohbete anında uygulanır",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("tr" to "Türkçe", "en" to "English", "auto" to "Otomatik")
+                    .forEach { (v, label) ->
+                        FilterChip(
+                            selected = responseLang == v,
+                            onClick = { scope.launch { prefs.setResponseLang(v) } },
+                            label = { Text(label) }
+                        )
+                    }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
             SliderRow(
                 icon = Icons.Outlined.Thermostat,

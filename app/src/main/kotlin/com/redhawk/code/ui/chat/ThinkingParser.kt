@@ -1,11 +1,12 @@
 package com.redhawk.code.ui.chat
 
 /**
- * Model çıktısından <think>...</think> bloğunu ayırır.
+ * Model çıktısından düşünme bloğunu ayırır.
  * Desteklenen formatlar:
  *   - <think>...</think>            (DeepSeek R1, Qwen3)
  *   -  thinking...                 (alternatif)
  *   - <|think|>...</|think|>       (bazı modeller)
+ *   - kapanış tek başına gelse bile (açılışsız) ayrıştırılır (küçük modeller)
  */
 object ThinkingParser {
 
@@ -21,27 +22,30 @@ object ThinkingParser {
             if (i != -1 && (openIdx == -1 || i < openIdx)) { openIdx = i; openTag = t }
         }
 
+        // Kapanış: açılış varsa ondan sonra, yoksa metnin başından ara.
+        // (Bazı küçük modeller açılışı yutar, sadece kapanışı yazar —
+        //  yakalanmazsa düşünme + etiket cevaba sızar.)
+        val from = if (openIdx != -1) openIdx + openTag.length else 0
         var closeIdx = -1; var closeTag = ""
-        if (openIdx != -1) {
-            val from = openIdx + openTag.length
-            for (t in CLOSE) {
-                val i = raw.indexOf(t, from)
-                if (i != -1 && (closeIdx == -1 || i < closeIdx)) { closeIdx = i; closeTag = t }
-            }
+        for (t in CLOSE) {
+            val i = raw.indexOf(t, from)
+            if (i != -1 && (closeIdx == -1 || i < closeIdx)) { closeIdx = i; closeTag = t }
         }
 
         return when {
-            openIdx == -1 && closeIdx == -1 -> Parsed("", raw.trimStart('\n'), false)
+            openIdx == -1 && closeIdx == -1 ->
+                Parsed("", stripTags(raw.trimStart('\n')), false)
             openIdx != -1 && closeIdx == -1 -> {
                 val t = raw.substring(openIdx + openTag.length).trimStart('\n')
-                Parsed(t, "", true)   // hâlâ düşünüyor
+                Parsed(t, "", true)
             }
-            openIdx != -1 && closeIdx != -1 -> {
-                val t = raw.substring(openIdx + openTag.length, closeIdx).trim('\n')
+            closeIdx != -1 -> {
+                val tStart = if (openIdx != -1) openIdx + openTag.length else 0
+                val t = raw.substring(tStart, closeIdx).trim('\n').trim()
                 val r = raw.substring(closeIdx + closeTag.length).trimStart('\n')
-                Parsed(t, r, false)
+                Parsed(t, stripTags(r), false)
             }
-            else -> Parsed("", raw.trimStart('\n'), false)
+            else -> Parsed("", stripTags(raw.trimStart('\n')), false)
         }
     }
 
@@ -50,8 +54,15 @@ object ThinkingParser {
         return Parsed(p.thinking, cleanResponse(p.response), false)
     }
 
-    private fun cleanResponse(s: String): String {
+    /** Yanıta sızmış etiket artıklarını temizle (güvenlik ağı) */
+    private fun stripTags(s: String): String {
         var r = s
+        (OPEN + CLOSE).forEach { r = r.replace(it, "") }
+        return r.trimStart('\n').trimEnd()
+    }
+
+    private fun cleanResponse(s: String): String {
+        var r = stripTags(s)
         r = r.replace("<|im_end|>", "")
         r = r.replace("<|im_start|>", "")
         r = r.replace("<|endoftext|>", "")

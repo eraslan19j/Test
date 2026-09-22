@@ -21,6 +21,7 @@ class PrefsStore(private val context: Context) {
         val SYSTEM_PROMPT           = stringPreferencesKey("system_prompt")
         val TEMPERATURE             = floatPreferencesKey("temperature")
         val MAX_TOKENS              = intPreferencesKey("max_tokens")
+        val RESPONSE_LANG           = stringPreferencesKey("response_lang") // tr | en | auto
 
         // Görünüm
         val THEME                   = stringPreferencesKey("theme")        // system | light | dark
@@ -80,6 +81,9 @@ class PrefsStore(private val context: Context) {
 
     val maxTokens: Flow<Int> = context.redhawkDataStore.data.map { it[Keys.MAX_TOKENS] ?: 2048 }
     suspend fun setMaxTokens(v: Int) = context.redhawkDataStore.edit { it[Keys.MAX_TOKENS] = v }
+
+    val responseLang: Flow<String> = context.redhawkDataStore.data.map { it[Keys.RESPONSE_LANG] ?: "tr" }
+    suspend fun setResponseLang(v: String) = context.redhawkDataStore.edit { it[Keys.RESPONSE_LANG] = v }
 
     // ---- Görünüm
     val theme: Flow<String> = context.redhawkDataStore.data.map { it[Keys.THEME] ?: "dark" }
@@ -168,7 +172,7 @@ class PrefsStore(private val context: Context) {
 
     companion object {
         const val DEFAULT_SYSTEM_PROMPT =
-            "Sen ReDHawK adinda yardimci bir AI asistansin. Kisa, net ve Turkce cevap ver. " +
-            "Kod yazarken temiz ve okunabilir kod uret. Emin olmadigin konularda tahmin yurutme."
+            "Sen ReDHawK adında yardımcı bir AI asistansın. Kısa, net ve Türkçe cevap ver. " +
+            "Kod yazarken temiz ve okunabilir kod üret. Emin olmadığın konularda tahmin yürütme."
     }
 }

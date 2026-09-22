@@ -536,8 +536,15 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun buildSystemPrompt(base: String, agent: Boolean): String {
-        var prompt = base
+    private suspend fun buildSystemPrompt(base: String, agent: Boolean): String {
+        val lang = runCatching { prefs.responseLang.first() }.getOrDefault("tr")
+        val directive = when (lang) {
+            "en" -> "Always respond in English. Never write Turkish."
+            "auto" -> ""
+            else -> "Her zaman Türkçe cevap ver. Asla İngilizce yazma. " +
+                "Düşünme metnin bile Türkçe olsun."
+        }
+        var prompt = if (directive.isNotBlank()) "$base\n\n$directive" else base
         val skills = _state.value.enabledSkills
         if (skills.isNotEmpty()) {
             val prompts = skills.mapNotNull { SkillCatalog.byId(it)?.prompt }
