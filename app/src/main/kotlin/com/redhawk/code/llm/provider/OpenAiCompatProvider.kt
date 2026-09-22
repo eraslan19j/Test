@@ -6,8 +6,10 @@ import com.redhawk.code.llm.model.ChatMessage
 import com.redhawk.code.llm.model.ToolCall
 import com.redhawk.code.llm.model.ToolSpec
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -62,9 +64,11 @@ class OpenAiCompatProvider(
             var toolName: String? = null
             val toolArgs = StringBuilder()
             var sawToolCall = false
+            var gotFirst = false
 
             override fun onEvent(es: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") { trySend(LlmEvent.Done); close(); return }
+                gotFirst = true
                 parseChunk(data)?.let { trySend(it) }
             }
 
@@ -84,7 +88,9 @@ class OpenAiCompatProvider(
                     t is java.net.SocketTimeoutException -> "Bağlantı zaman aşımı."
                     else -> t?.message ?: "Bağlantı hatası."
                 }
-                trySend(LlmEvent.Error(msg, t))
+                // Kota/hız sınırı → otomatik sağlayıcı geçişini tetikler
+                val quota = code == 429 || code == 402 || code == 403
+                trySend(LlmEvent.Error(msg, t, quota))
                 trySend(LlmEvent.Done)
                 close()
             }
@@ -129,7 +135,17 @@ class OpenAiCompatProvider(
         }
 
         val es = EventSources.createFactory(client).newEventSource(reqB.build(), listener)
-        awaitClose { es.cancel() }
+
+        // İlk token bekçisi: 60 sn sessizlik = zaman aşımı (takılan "…" bitsin)
+        val watchdog = launch {
+            delay(60_000)
+            if (!listener.gotFirst) {
+                trySend(LlmEvent.Error("60 sn içinde yanıt alınamadı. Tekrar dene veya model değiştir."))
+                trySend(LlmEvent.Done)
+                close()
+            }
+        }
+        awaitClose { watchdog.cancel(); es.cancel() }
     }
 
     private fun buildBody(

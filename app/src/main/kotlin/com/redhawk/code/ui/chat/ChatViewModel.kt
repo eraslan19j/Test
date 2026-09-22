@@ -261,6 +261,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ---------- Kota bitince otomatik sağlayıcı geçişi ----------
+
+    private var quotaFailed = false
+    private var failoverDepth = 0
+
+    /** Mevcut hariç ilk yedek sağlayıcı (ücretsizler öncelikli) */
+    private suspend fun findFailoverProvider(): ProviderEntity? = runCatching {
+        val all = providerRepo.observeAll().first()
+        val cur = _state.value.currentProvider?.id
+        (all.filter { it.isFree } + all.filter { !it.isFree }).firstOrNull { it.id != cur }
+    }.getOrNull()
+
     /**
      * Üretimi GERÇEKTEN durdurur: job iptal edilir, SSE bağlantısı
      * awaitClose içinde kapatılır, yarım kalan metin DB'ye kaydedilir.
@@ -304,6 +316,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             thinkingEndMs = 0L
             wasThinking = false
             stopRequested = false
+            quotaFailed = false
+            if (failoverDepth >= 3) failoverDepth = 0
 
             _state.update { st ->
                 st.copy(
@@ -381,6 +395,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                                 is LlmEvent.Error -> {
                                     _state.update { it.copy(error = ev.message) }
                                     aborted = true
+                                    if (ev.quotaExceeded) quotaFailed = true
                                 }
                                 LlmEvent.Done -> {}
                             }
@@ -436,6 +451,36 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     streamingMsgId = null
                     _state.update { it.copy(isStreaming = false) }
+
+                    // Kota bittiyse: yedek sağlayıcıya geçip otomatik tekrar dene (max 3)
+                    if (!quotaFailed || stopRequested) {
+                        failoverDepth = 0
+                    } else if (failoverDepth < 3) {
+                        val next = withContext(NonCancellable) { findFailoverProvider() }
+                        if (next != null) {
+                            failoverDepth++
+                            quotaFailed = false
+                            switchProvider(next)
+                            withContext(NonCancellable) {
+                                runCatching { repo.deleteMessage(assistantMsg.id) }
+                                runCatching { repo.deleteMessage(userMsg.id) }
+                            }
+                            _state.update { st ->
+                                st.copy(
+                                    messages = st.messages.filter {
+                                        it.id != userMsg.id && it.id != assistantMsg.id
+                                    },
+                                    input = text,
+                                    error = "Kota bitti → ${next.displayName} ile devam ediliyor…"
+                                )
+                            }
+                            viewModelScope.launch { send() }
+                        } else {
+                            failoverDepth = 0
+                        }
+                    } else {
+                        failoverDepth = 0
+                    }
                 }
             }
         } catch (t: Throwable) {

@@ -27,6 +27,11 @@ interface LlmProvider {
 sealed class LlmEvent {
     data class TextDelta(val text: String) : LlmEvent()
     data class ToolCallRequested(val call: com.redhawk.code.llm.model.ToolCall) : LlmEvent()
-    data class Error(val message: String, val cause: Throwable? = null) : LlmEvent()
+    data class Error(
+        val message: String,
+        val cause: Throwable? = null,
+        /** true = kota/hız sınırı → otomatik sağlayıcı geçişi denenebilir */
+        val quotaExceeded: Boolean = false
+    ) : LlmEvent()
     object Done : LlmEvent()
 }

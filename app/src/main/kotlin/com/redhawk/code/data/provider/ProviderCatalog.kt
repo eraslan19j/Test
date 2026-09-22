@@ -54,6 +54,23 @@ object ProviderCatalog {
             )
         ),
         ProviderTemplate(
+            type = "duckai",
+            displayName = "Duck.ai",
+            defaultBaseUrl = "https://duckduckgo.com",
+            defaultModel = "gpt-4o-mini",
+            requiresKey = false,
+            keyUrl = "",
+            isFree = true,
+            freeHint = "Anahtar gerekmez — deneysel, bozulabilir",
+            description = "ANAHTARSIZ · GPT-4o mini ücretsiz (deneysel)",
+            availableModels = listOf(
+                "gpt-4o-mini",
+                "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                "claude-3-haiku-20240307",
+                "mistralai/Mixtral-8x7B-Instruct-v0.1"
+            )
+        ),
+        ProviderTemplate(
             type = "openai_compat",
             displayName = "Groq",
             defaultBaseUrl = "https://api.groq.com/openai/v1",

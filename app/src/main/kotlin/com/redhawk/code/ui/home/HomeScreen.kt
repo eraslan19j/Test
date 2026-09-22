@@ -71,7 +71,7 @@ fun HomeScreen(
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
                 contentAlignment = Alignment.Center) {
                 Image(
-                    painter = painterResource(id = R.drawable.redhawk_icon),
+                    painter = painterResource(id = R.drawable.redhawk_round),
                     contentDescription = null,
                     modifier = Modifier.size(28.dp)
                 )

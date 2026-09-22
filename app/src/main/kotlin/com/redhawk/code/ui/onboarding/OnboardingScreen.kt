@@ -53,7 +53,7 @@ fun OnboardingScreen(
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource(id = R.drawable.redhawk_icon),
+                painter = painterResource(id = R.drawable.redhawk_round),
                 contentDescription = null,
                 modifier = Modifier.size(72.dp)
             )

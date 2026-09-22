@@ -278,6 +278,14 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
             Box(
                 Modifier.widthIn(max = 320.dp)
                     .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable {
+                        // Kendi mesajına dokun → kopyala
+                        (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                            .setPrimaryClip(ClipData.newPlainText("chat", m.content))
+                        android.widget.Toast.makeText(ctx, "Kopyalandı",
+                            android.widget.Toast.LENGTH_SHORT).show()
+                    }
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Text(m.content, color = MaterialTheme.colorScheme.onPrimary,
