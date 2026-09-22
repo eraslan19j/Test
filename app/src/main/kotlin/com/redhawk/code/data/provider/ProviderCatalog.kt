@@ -72,6 +72,39 @@ object ProviderCatalog {
         ),
         ProviderTemplate(
             type = "openai_compat",
+            displayName = "NVIDIA NIM",
+            defaultBaseUrl = "https://integrate.api.nvidia.com/v1",
+            defaultModel = "deepseek-ai/deepseek-v3.2",
+            requiresKey = true,
+            keyUrl = "https://build.nvidia.com",
+            isFree = true,
+            freeHint = "Ücretsiz anahtar — dakikada 40 istek",
+            description = "ÜCRETSİZ · DeepSeek, Kimi, Llama (NVIDIA)",
+            availableModels = listOf(
+                "deepseek-ai/deepseek-v3.2",
+                "moonshotai/kimi-k2-instruct",
+                "meta/llama-3.1-70b-instruct",
+                "nvidia/llama-3.1-nemotron-70b-instruct"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "Z.ai GLM",
+            defaultBaseUrl = "https://open.bigmodel.cn/api/paas/v4",
+            defaultModel = "glm-4-flash",
+            requiresKey = true,
+            keyUrl = "https://open.bigmodel.cn",
+            isFree = true,
+            freeHint = "Yeni üyelikte ücretsiz kredi",
+            description = "ÜCRETSİZ KREDİ · GLM-4 (Zhipu)",
+            availableModels = listOf(
+                "glm-4-flash",
+                "glm-4v-flash",
+                "glm-4-plus"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
             displayName = "Groq",
             defaultBaseUrl = "https://api.groq.com/openai/v1",
             defaultModel = "openai/gpt-oss-120b",

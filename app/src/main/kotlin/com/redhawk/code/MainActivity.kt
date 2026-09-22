@@ -231,6 +231,11 @@ private fun MainNav(activity: ComponentActivity) {
                 "settings_notifications" -> NotificationsScreen(prefs) { nav.pop() }
                 "settings_account" -> AccountScreen(prefs) { nav.pop() }
 
+                "tools" -> com.redhawk.code.ui.tools.FreeToolsScreen(
+                    onBack = { nav.pop() },
+                    onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+
                 else -> Scaffold(
                     topBar = {
                         TopAppBar(

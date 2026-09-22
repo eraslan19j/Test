@@ -286,7 +286,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { _state.value.chatId?.let { repo.clearMessages(it) } }
     }
 
-    fun send() = viewModelScope.launch {
+    fun send(): Job = viewModelScope.launch {
         try {
             val text = _state.value.input.trim()
             if (text.isEmpty() || _state.value.isStreaming) return@launch
