@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Build çıktılarını Termux home'a taşı (FUSE yerine ext4)
+
 android {
     namespace = "com.redhawk.code"
     compileSdk = 36

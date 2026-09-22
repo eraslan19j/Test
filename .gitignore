@@ -31,20 +31,6 @@ Thumbs.db
 # Kotlin
 .kotlin/
 
-# Native (local model artıkları)
-*.a
-*.so
-obj/
-jniLibs/
-cpp/
-
-# Keystore
-*.jks
-*.keystore
-
-# Logs
-*.log
-
 # Native (kullanılmıyor)
 *.a
 *.so
@@ -52,3 +38,10 @@ cpp/
 cpp/
 jniLibs/
 obj/
+
+# Keystore
+*.jks
+*.keystore
+
+# Logs
+*.log
