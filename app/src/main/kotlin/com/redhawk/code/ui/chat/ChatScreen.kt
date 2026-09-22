@@ -318,12 +318,16 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 if (m.content.isEmpty() && m.streaming) {
-                    // Animasyonlu "yazıyor" göstergesi (statik "…" yerine)
+                    // Animasyonlu "yazıyor" göstergesi + canlı geçen süre
                     val inf = rememberInfiniteTransition(label = "typing")
                     val ph by inf.animateFloat(0f, 3f,
                         infiniteRepeatable(tween(1200, easing = LinearEasing),
                             RepeatMode.Restart),
                         label = "ph")
+                    // 1 saatlik tek-seferlik animasyon = açılıştan beri geçen süre
+                    val elapsed by inf.animateFloat(0f, 3600f,
+                        tween(3_600_000, easing = LinearEasing),
+                        label = "clock")
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         repeat(3) { i ->
                             val a = 0.25f + 0.75f *
@@ -337,7 +341,7 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                             if (i < 2) Spacer(Modifier.width(6.dp))
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text("yazıyor…",
+                        Text("yazıyor… ${elapsed.toInt()} sn",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

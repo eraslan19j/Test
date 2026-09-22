@@ -37,54 +37,59 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 ### v0.5 — Build Fix + NVIDIA + Z.ai
 - [x] Build fix: `send(): Job` dönüş tipi (recursive type inference hatası)
 - [x] NVIDIA NIM + Z.ai GLM presetleri
-- [x] Ücretsiz Araçlar ekranı eklendi, sonra v0.6'da KALDIRILDI (kullanıcı isteği)
 
 ### v0.6 — KiraAI + "…" Ölümü + Animasyonlu Ana Ekran
-- [x] KiraAI preset (kiraai.vn/api/v1, OpenAI uyumlu, ücretli anahtar)
-- [x] Düşünme modeli köprüsü: reasoning_content → düşünme paneli
-      (DeepSeek R1 tarzı modeller artık dakikalarca "…" gibi durmaz)
-- [x] Boş-yanıt bekçisi: sessiz "…" yerine "Model boş yanıt döndü" uyarısı
-- [x] Animasyonlu "yazıyor…" göstergesi (nabız atan 3 nokta)
-- [x] Ana ekran: animasyonlu arka plan (süzülen ışıklar) + kademeli
-      kart girişleri + nabız atan logo + degrade ikonlar
-- [x] 1min.ai BEKLEMEDE: resmi API özel format (OpenAI-uyumlu değil),
-      docs JS-gated; endpoint doğrulanamadı (bak: Sıradaki)
+- [x] Ücretsiz Araçlar ekranı KALDIRILDI (kullanıcı isteği)
+- [x] KiraAI preset + reasoning_content köprüsü + animasyonlu yazıyor
+      göstergesi + boş-yanıt bekçisi + animasyonlu ana ekran
+
+### v0.7 — Sessiz Ölüm Yok + Atria + KiraAI Ücretsiz
+- [x] SSE-içi hata zarfı artık yakalanıyor (200 içinde {"error"} =
+      eskiden sessiz "…", şimdi net hata + kota algısı)
+- [x] Sıfır-olay koruması: hiç SSE gelmeden kapanan akış hata verir
+      (Duck.ai dahil), sessiz "…" imkansız
+- [x] Canlı geçen süre: "yazıyor… 12 sn" (bekçi hâlâ 60 sn —
+      bedava düşünme modelleri yavaş olabilir)
+- [x] Atria preset (api.atria-asi.ai/v1, Bearer, doğrulanmış;
+      100M token kampanya, model: Atria-Dawn-Preview)
+- [x] KiraAI güncellendi: varsayılan ücretsiz kira-mini-1.0 +
+      dokümandan doğrulanmış 15 model ID'si
+- [x] 1min.ai HÂLÂ BEKLEMEDE: 2 arama + docs + relay denemesi sonuçsuz
+      (relay reposu silinmiş/404). Kullanıcı panelinden 1 curl örneği
+      gönderince özel istemci yazılacak.
 
 ## Ücretsiz AI gerçekleri (araştırma notu)
 
 - Gerçekten "limitsiz + tokensiz + anahtarsız + güçlü" AI yoktur.
   En yakınları: Pollinations (anahtarsız) ve Duck.ai (deneysel).
-- KiraAI: OpenAI-SDK uyumlu (`/api/v1`), ücretli anahtar; bedava
-  promosyonları Eylül 2026'da tek tek bitiyor (kendi duyuruları).
-  Model ID'leri sayfa slug'larından alındı; 404 verirse sitedeki
-  tam ID'yi model alanına yapıştır.
-- 1min.ai: Relay projeleri var ama resmi uç OpenAI-uyumlu DEĞİL.
-  Kullanıcının panelindeki sohbet endpoint örneği gelince özel
-  istemci (OneMinProvider) yazılacak.
-- Strateji: BİRDEN FAZLA sağlayıcı ekle → kota biten otomatik
-  diğerine geçer = pratikte kesintisiz kullanım.
+- KiraAI: %100 OpenAI uyumlu, Bearer auth. `kira-mini-1.0` dokümanda
+  açıkça ücretsiz. "Free" sonekli promosyon modellerin bir kısmı
+  Eylül 2026'da bitirildi (kendi duyuruları) — o yüzden preset,
+  güncel dokümandaki ID'leri kullanır.
+- Atria: `/v1/chat/completions` canlı doğrulandı (üçüncü parti PR),
+  anahtar `atr_...`, model adı büyük-küçük harf duyarlı.
+  max_tokens aralığı 1-65536 (bizim slider max 8192 → güvenli).
+- Sessiz "…"nın 4 sebebi vardı, 4'ü de kapatıldı: (1) eski APK,
+  (2) reasoning_content yok sayma, (3) SSE-içi error zarfı,
+  (4) SSE-dışı/boş 200 yanıtı. Artık her durumda ya metin ya hata.
+- 1min.ai: API ürünü mevcut ama tel formatı kamuya doğrulanamadı.
 
 ## Sıradaki (önerilen sıra)
 
-### v0.7 — 1min.ai Özel İstemci (kullanıcı endpoint gönderince)
-- [ ] docs.1min.ai sohbet endpoint formatı → OneMinProvider.kt
-- [ ] Kredi bakiyesi göstergesi (destekleniyorsa)
+### v0.8 — 1min.ai Özel İstemci (kullanıcı curl gönderince)
+- [ ] Sohbet endpoint formatı → OneMinProvider.kt
 
-### v0.8 — Dosya Gezgini + Editör
+### v0.9 — Dosya Gezgini + Editör
 - [ ] Ajan deposunu uygulamada gör/düzenle (gezgin + metin editörü)
 - [ ] write_file için diff önizleme + `delete_file` aracı (onaylı)
 
-### v0.9 — Ajan Hafızası + Terminal + Git
-- [ ] Sohbet özeti / bağlam yönetimi, kısıtlı komut çalıştırma
-- [ ] Git entegrasyonu (commit/geri al = ajan güvenlik ağı)
-
-### v1.0 — Gelir
-- [ ] AdMob + Play Billing Pro (anahtarsız hazır model + reklamsız)
+### v1.0 — Ajan Hafızası + Terminal + Git + Gelir
+- [ ] Sohbet özeti, kısıtlı komut çalıştırma, Git, AdMob/Pro
 
 ## Test listesi (AndroidIDE build sonrası)
 
 1. Build başarılı
-2. KiraAI ekle (satın aldığın anahtar) → sohbet et
-3. Düşünme modeli dene (örn. DeepSeek R1 türevi) → düşünme paneli akıyor mu
-4. Ana ekran: arka plan ışıkları + kart animasyonları
-5. Menüde "Ücretsiz Araçlar" YOK (kaldırıldı)
+2. Atria ekle (atr_ anahtarı) → sohbet et
+3. KiraAI ekle → varsayılan kira-mini-1.0 ücretsiz dene
+4. Bozuk model ID'si yaz → net hata mesajı (sessiz "…" YOK)
+5. "yazıyor… N sn" sayacı görünüyor mu

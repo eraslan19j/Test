@@ -121,7 +121,13 @@ class DuckAiProvider(
                 close()
             }
 
-            override fun onClosed(es: EventSource) { trySend(LlmEvent.Done); close() }
+            override fun onClosed(es: EventSource) {
+                // Hiçbir SSE olayı gelmeden kapandıysa sessiz "…" yerine hata ver.
+                if (!gotFirst) {
+                    trySend(LlmEvent.Error("Duck.ai yanıt akışı başlatamadı. Tekrar dene."))
+                }
+                trySend(LlmEvent.Done); close()
+            }
 
             private fun parseMessage(data: String): String? = try {
                 json.parseToJsonElement(data).jsonObject["message"]

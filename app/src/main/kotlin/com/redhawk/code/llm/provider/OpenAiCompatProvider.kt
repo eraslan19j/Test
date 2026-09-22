@@ -98,11 +98,34 @@ class OpenAiCompatProvider(
                 close()
             }
 
-            override fun onClosed(es: EventSource) { trySend(LlmEvent.Done); close() }
+            override fun onClosed(es: EventSource) {
+                // Hiçbir SSE olayı gelmeden kapandıysa sessiz "…" yerine hata ver.
+                // (Akış bayrağını yok sayan / SSE dışı yanıt veren uçlar.)
+                if (!gotFirst) {
+                    trySend(LlmEvent.Error("Sağlayıcı yanıt akışı başlatamadı. URL ve modeli kontrol et."))
+                }
+                trySend(LlmEvent.Done); close()
+            }
 
             private fun parseChunk(data: String): LlmEvent? {
                 return try {
                     val obj = json.parseToJsonElement(data).jsonObject
+                    // Bazı uçlar hatayı 200 + SSE içinde gönderir (OpenRouter vb).
+                    // Yok sayılırsa sessiz "…" olur — hataya çevir.
+                    obj["error"]?.let { e ->
+                        val emsg = when (e) {
+                            is JsonObject -> e["message"]?.jsonPrimitive?.contentOrNull
+                                ?: e.toString().take(200)
+                            is JsonPrimitive -> e.contentOrNull ?: e.toString()
+                            else -> e.toString().take(200)
+                        }.ifBlank { "API hatası" }
+                        val low = emsg.lowercase()
+                        val quota = low.contains("rate") || low.contains("quota") ||
+                            low.contains("429") || low.contains("credit") ||
+                            low.contains("insufficient") || low.contains("limit") ||
+                            low.contains("balance") || low.contains("payment")
+                        return LlmEvent.Error(emsg.take(300), null, quota)
+                    }
                     val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
                     val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
                     val delta = choice["delta"]?.jsonObject

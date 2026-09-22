@@ -105,19 +105,44 @@ object ProviderCatalog {
         ),
         ProviderTemplate(
             type = "openai_compat",
+            displayName = "Atria",
+            defaultBaseUrl = "https://api.atria-asi.ai/v1",
+            defaultModel = "Atria-Dawn-Preview",
+            requiresKey = true,
+            keyUrl = "https://api.atria-asi.ai/docs",
+            isFree = true,
+            freeHint = "100M token ücretsiz kota (kampanya)",
+            description = "ÜCRETSİZ KOTA · Atria Dawn agentic (OpenAI uyumlu)",
+            availableModels = listOf(
+                "Atria-Dawn-Preview"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
             displayName = "KiraAI",
             defaultBaseUrl = "https://kiraai.vn/api/v1",
-            defaultModel = "kira-3.5-flash",
+            defaultModel = "kira-mini-1.0",
             requiresKey = true,
             keyUrl = "https://kiraai.vn/developer/",
-            isFree = false,
-            freeHint = "",
-            description = "ÜCRETLİ ANAHTAR · Kira 3.5/2.5 (OpenAI uyumlu)",
+            isFree = true,
+            freeHint = "kira-mini-1.0 ücretsiz (anahtar gerekli)",
+            description = "ÜCRETSİZ MODEL VAR · Kira + GLM/Qwen/Mimo (OpenAI uyumlu)",
             availableModels = listOf(
+                "kira-mini-1.0",
+                "kira-flash",
                 "kira-3.5-flash",
                 "kira-3.5-pro",
                 "kira-2.5-flash",
-                "kira-2.5-pro"
+                "kira-2.5-pro",
+                "glm-5.3-flash",
+                "glm-5.3",
+                "qwen3.8-flash",
+                "qwen3.8-27b",
+                "mimo-v2.5",
+                "hy3",
+                "gpt-oss-120b",
+                "mercury-2.5",
+                "minimax-m3"
             )
         ),
         ProviderTemplate(
