@@ -68,6 +68,7 @@ private fun MainNav(activity: ComponentActivity) {
     val providerRepo = remember { ProviderRepository(ctx) }
     val providers by providerRepo.observeAll().collectAsState(initial = emptyList())
     val selectedProviderId by prefs.selectedProviderId.collectAsState(initial = null)
+    val theme by prefs.theme.collectAsState(initial = "dark")
 
     val nav = remember { NavStack("home") }
     val route = nav.current
@@ -127,7 +128,13 @@ private fun MainNav(activity: ComponentActivity) {
             AppDrawer(
                 currentRoute = route,
                 onSelect = { r -> nav.navigate(r); scope.launch { drawerState.close() } },
-                onClose = { scope.launch { drawerState.close() } }
+                onClose = { scope.launch { drawerState.close() } },
+                onNewChat = { chatVm.newChat(); nav.reset("chat") },
+                themeLabel = if (theme == "light") "Açık" else "Koyu",
+                darkTheme = theme != "light",
+                onToggleTheme = {
+                    scope.launch { prefs.setTheme(if (theme == "light") "dark" else "light") }
+                }
             )
         }
     ) {

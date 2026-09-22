@@ -50,6 +50,18 @@ fun ChatScreen(
     var showModelPicker by remember { mutableStateOf(false) }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
+    // Sesli okuma motoru (TTS) — ekran kapanınca serbest bırakılır
+    var tts by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
+    DisposableEffect(ctx) {
+        val engine = android.speech.tts.TextToSpeech(ctx) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                engine.language = java.util.Locale("tr", "TR")
+            }
+        }
+        tts = engine
+        onDispose { engine.stop(); engine.shutdown() }
+    }
+
     // Proje klasörü seçici (SAF): kalıcı okuma/yazma izni alınır
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
@@ -321,38 +333,9 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
             Spacer(Modifier.height(8.dp))
         }
 
-        // Cevap
-        val showBubble = m.content.isNotBlank() || !m.thinkingStreaming
-        if (showBubble) {
-            val bubbleShape = RoundedCornerShape(
-                topStart = 4.dp, topEnd = 16.dp,
-                bottomStart = 16.dp, bottomEnd = 16.dp
-            )
-            // Akışta nabız gibi atan parlama çerçevesi (bitince maliyet sıfır)
-            var glowA = 0.5f
-            if (m.streaming) {
-                val gi = rememberInfiniteTransition(label = "glow")
-                glowA = gi.animateFloat(0.25f, 0.6f,
-                    infiniteRepeatable(tween(900, easing = FastOutSlowInEasing),
-                        RepeatMode.Reverse),
-                    label = "ga").value
-            }
-            Box(
-                Modifier.widthIn(max = 330.dp)
-                    .background(
-                        if (m.streaming) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-                        else MaterialTheme.colorScheme.surfaceVariant,
-                        bubbleShape
-                    )
-                    .then(
-                        if (m.streaming) Modifier.border(
-                            1.5.dp,
-                            MaterialTheme.colorScheme.primary.copy(alpha = glowA),
-                            bubbleShape
-                        ) else Modifier
-                    )
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
+        // Cevap (balonsuz, tam genişlik — referans tarzı)
+        val showResponse = m.content.isNotBlank() || !m.thinkingStreaming
+        if (showResponse) {
                 if (m.content.isEmpty() && m.streaming) {
                     // Animasyonlu "yazıyor" göstergesi + canlı geçen süre
                     val inf = rememberInfiniteTransition(label = "typing")
@@ -387,10 +370,10 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                         text = m.content.ifEmpty { "⚠ Model boş yanıt döndü" },
                         color = MaterialTheme.colorScheme.onSurface,
                         fontFamily = FontFamily.SansSerif,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                     )
                 }
-            }
         }
 
         // Süre + aksiyonlar
@@ -417,6 +400,14 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                         type = "text/plain"; putExtra(Intent.EXTRA_TEXT, m.content)
                     }
                     ctx.startActivity(Intent.createChooser(i, "Paylaş"))
+                }
+                MsgAction(Icons.Outlined.VolumeUp) {
+                    val t = tts
+                    if (t != null && m.content.isNotBlank()) {
+                        t.stop()
+                        t.speak(m.content, android.speech.tts.TextToSpeech.QUEUE_FLUSH,
+                            null, "redhawk")
+                    }
                 }
                 MsgAction(Icons.Outlined.ThumbUp) {}
                 MsgAction(Icons.Outlined.ThumbDown) {}

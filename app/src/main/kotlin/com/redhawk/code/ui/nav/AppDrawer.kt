@@ -19,26 +19,42 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.redhawk.code.R
 
-data class DrawerItem(val label: String, val icon: ImageVector, val route: String)
+private sealed interface DrawerEntry {
+    data class Link(val label: String, val icon: ImageVector, val route: String) : DrawerEntry
+    data class Action(val label: String, val icon: ImageVector, val onClick: () -> Unit) : DrawerEntry
+}
 
 @Composable
 fun AppDrawer(
     currentRoute: String,
     onSelect: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onNewChat: () -> Unit = {},
+    themeLabel: String = "",
+    darkTheme: Boolean = true,
+    onToggleTheme: () -> Unit = {}
 ) {
     val groups = listOf(
-        "NAVIGATION" to listOf(
-            DrawerItem("Ana ekran", Icons.Outlined.Home, "home"),
-            DrawerItem("AI Sohbet", Icons.Outlined.Chat, "chat"),
-            DrawerItem("Son Sohbetler", Icons.Outlined.History, "chatlist"),
+        "SOHBET" to listOf(
+            DrawerEntry.Link("AI Sohbet", Icons.Outlined.Chat, "chat"),
+            DrawerEntry.Action("Yeni Sohbet", Icons.Outlined.Add) {
+                onNewChat()
+                onClose()
+            },
+            DrawerEntry.Link("Son Sohbetler", Icons.Outlined.History, "chatlist"),
+            DrawerEntry.Link("Ana ekran", Icons.Outlined.Home, "home"),
         ),
         "MODEL VE DİL" to listOf(
-            DrawerItem("Sağlayıcılar", Icons.Outlined.Memory, "providers"),
-            DrawerItem("Yeni Sağlayıcı", Icons.Outlined.Add, "provider_setup"),
+            DrawerEntry.Link("Sağlayıcılar", Icons.Outlined.Memory, "providers"),
+            DrawerEntry.Link("Yeni Sağlayıcı", Icons.Outlined.Add, "provider_setup"),
+            DrawerEntry.Link("Yanıt Dili", Icons.Outlined.Translate, "settings"),
         ),
         "SİSTEM" to listOf(
-            DrawerItem("Ayarlar", Icons.Outlined.Settings, "settings"),
+            DrawerEntry.Link("Ayarlar", Icons.Outlined.Settings, "settings"),
+            DrawerEntry.Action(
+                "Tema: $themeLabel",
+                if (darkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode
+            ) { onToggleTheme() },
         ),
     )
 
@@ -77,10 +93,18 @@ fun AppDrawer(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 6.dp))
-                items.forEach { item ->
-                    DrawerRow(item, item.route == currentRoute) {
-                        onSelect(item.route)
-                        onClose()
+                items.forEach { entry ->
+                    when (entry) {
+                        is DrawerEntry.Link -> DrawerRow(
+                            entry.label, entry.icon,
+                            entry.route == currentRoute
+                        ) {
+                            onSelect(entry.route)
+                            onClose()
+                        }
+                        is DrawerEntry.Action -> DrawerRow(
+                            entry.label, entry.icon, false
+                        ) { entry.onClick() }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -90,7 +114,7 @@ fun AppDrawer(
 }
 
 @Composable
-private fun DrawerRow(item: DrawerItem, selected: Boolean, onClick: () -> Unit) {
+private fun DrawerRow(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
     val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
              else MaterialTheme.colorScheme.background
     val fg = if (selected) MaterialTheme.colorScheme.primary
@@ -101,8 +125,8 @@ private fun DrawerRow(item: DrawerItem, selected: Boolean, onClick: () -> Unit) 
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(item.icon, null, tint = fg, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = fg, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(12.dp))
-        Text(item.label, color = fg, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = fg, style = MaterialTheme.typography.bodyMedium)
     }
 }

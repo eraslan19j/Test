@@ -123,14 +123,23 @@ fun HomeScreen(
                     slideInVertically(tween(450, delayMillis = 80)) { it / 4 }
             ) {
                 Column {
-                    Text("ReDHawK Code",
+                    val hour = java.util.Calendar.getInstance()
+                        .get(java.util.Calendar.HOUR_OF_DAY)
+                    val greeting = when (hour) {
+                        in 5..11 -> "Günaydın"
+                        in 12..17 -> "İyi günler"
+                        in 18..22 -> "İyi akşamlar"
+                        else -> "İyi geceler"
+                    }
+                    Text(greeting,
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(20.dp))
-                    Text("Çalışma alanın",
-                        style = MaterialTheme.typography.displaySmall,
+                    Text("Bugün ne yapıyoruz?",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold)
-                    Text("İhtiyacın olan her şey, sakin ve tek bir yerde.",
+                    Spacer(Modifier.height(8.dp))
+                    Text("Sohbet et, kod yaz, projeni büyüt — hepsi tek yerde.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

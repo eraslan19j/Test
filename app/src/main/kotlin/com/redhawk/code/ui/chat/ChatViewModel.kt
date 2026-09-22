@@ -542,7 +542,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "en" -> "Always respond in English. Never write Turkish."
             "auto" -> ""
             else -> "Her zaman Türkçe cevap ver. Asla İngilizce yazma. " +
-                "Düşünme metnin bile Türkçe olsun."
+                "Düşünme metnin bile Türkçe olsun. " +
+                "Cevabına İngilizce giriş cümlesi ekleme; 'The user asks' gibi " +
+                "kendi kendine konuşma. Doğrudan Türkçe cevaba başla."
         }
         var prompt = if (directive.isNotBlank()) "$base\n\n$directive" else base
         val skills = _state.value.enabledSkills
