@@ -43,7 +43,8 @@ fun ProviderSetupScreen(
 
     LaunchedEffect(picked) {
         picked?.let {
-            apiKey = ""
+            // DİKKAT: apiKey'e dokunma! Kullanıcı önce key yapıştırıp
+            // sonra template seçerse anahtarı uçurmayalım.
             baseUrl = it.defaultBaseUrl
             model = it.defaultModel
             name = it.displayName
@@ -163,9 +164,10 @@ fun ProviderSetupScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp), singleLine = true)
                         Spacer(Modifier.height(8.dp))
+                        val keyRequired = if (isEdit) false else (picked?.requiresKey == true)
                         OutlinedTextField(value = apiKey, onValueChange = { apiKey = it },
-                            label = { Text("API Anahtarı") },
-                            placeholder = { Text("sk-...") },
+                            label = { Text(if (keyRequired) "API Anahtarı *" else "API Anahtarı (opsiyonel)") },
+                            placeholder = { Text(if (keyRequired) "sk-..." else "Bu sağlayıcı anahtar istemiyor") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp), singleLine = true)
                         Spacer(Modifier.height(8.dp))
@@ -188,7 +190,8 @@ fun ProviderSetupScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     enabled = name.isNotBlank() && baseUrl.isNotBlank() &&
-                        model.isNotBlank() && apiKey.isNotBlank()
+                        model.isNotBlank() &&
+                        (isEdit || picked?.requiresKey != true || apiKey.isNotBlank())
                 ) {
                     Text(if (isEdit) "KAYDET" else "KAYDET VE BAŞLA",
                         fontWeight = FontWeight.SemiBold)

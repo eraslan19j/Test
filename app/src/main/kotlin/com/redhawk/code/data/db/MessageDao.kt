@@ -11,6 +11,9 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE chatId = :chatId ORDER BY createdAt DESC LIMIT 1")
     suspend fun lastInChat(chatId: String): MessageEntity?
 
+    @Query("SELECT * FROM messages WHERE chatId = :chatId AND isUser = 1 ORDER BY createdAt ASC LIMIT 1")
+    suspend fun firstUserMessage(chatId: String): MessageEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(message: MessageEntity)
 

@@ -31,6 +31,7 @@ import com.redhawk.code.ui.chatlist.ChatsListScreen
 import com.redhawk.code.ui.home.HomeScreen
 import com.redhawk.code.ui.nav.AppDrawer
 import com.redhawk.code.ui.nav.NavStack
+import com.redhawk.code.ui.onboarding.OnboardingScreen
 import com.redhawk.code.ui.provider.ProviderListScreen
 import com.redhawk.code.ui.provider.ProviderSetupScreen
 import com.redhawk.code.ui.settings.*
@@ -75,16 +76,49 @@ private fun MainNav(activity: ComponentActivity) {
     val chatVm: ChatViewModel = viewModel()
     val chats by chatVm.chats.collectAsState(initial = emptyList())
 
-    var editingProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    // null = prefs henüz yükleniyor (boş zemin göster)
+    val setupDone by prefs.setupDone.collectAsState(initial = null)
 
-    LaunchedEffect(selectedProviderId, providers) {
-        val id = selectedProviderId ?: return@LaunchedEffect
-        val p = providers.find { it.id == id } ?: return@LaunchedEffect
-        chatVm.switchProvider(p)
-    }
+    var editingProvider by remember { mutableStateOf<ProviderEntity?>(null) }
+    var onboardingSetup by remember { mutableStateOf(false) }
+
+    // NOT: Eski LaunchedEffect(selectedProviderId, providers) döngüsü kaldırıldı.
+    // Sağlayıcı seçimi TEK YÖN: kullanıcı seçer → switchProvider → prefs'e yazar.
+    // Açılış yüklemesini ChatViewModel.init zaten yapıyor.
 
     BackHandler {
         if (!nav.pop()) activity.finish()
+    }
+
+    // ---- İlk açılış akışı (sadece setupDone=false iken) ----
+    if (setupDone == null) {
+        // Prefs yükleniyor: boş zemin göster
+        Box(Modifier.fillMaxSize())
+        return
+    }
+    if (!setupDone!! && !onboardingSetup) {
+        OnboardingScreen(
+            onSetupProvider = { onboardingSetup = true },
+            onSkip = { scope.launch { prefs.setSetupDone(true) } }
+        )
+        return
+    }
+    if (!setupDone!! && onboardingSetup) {
+        ProviderSetupScreen(
+            editing = null,
+            onBack = { onboardingSetup = false },
+            onSaveNew = { template, key, url, model, name ->
+                scope.launch {
+                    val e = providerRepo.createFromTemplate(template, key, model, url)
+                    prefs.setSelectedProvider(e.id)
+                    chatVm.switchProvider(e)
+                    prefs.setSetupDone(true)
+                }
+            },
+            onSaveEdit = { _, _, _, _, _ -> },
+            onOpenList = { }
+        )
+        return
     }
 
     ModalNavigationDrawer(

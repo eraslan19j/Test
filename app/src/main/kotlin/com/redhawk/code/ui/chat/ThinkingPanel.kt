@@ -35,7 +35,7 @@ fun ThinkingPanel(
     toolLabel: String? = null,
     defaultExpanded: Boolean = false
 ) {
-    if (thinking.isBlank() && !isStreaming) return
+    if (thinking.isBlank() && !isStreaming && toolLabel == null) return
 
     var userToggled by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(defaultExpanded) }
@@ -90,7 +90,14 @@ fun ThinkingPanel(
                             )
                         }
                     }
-                    if (!expanded && thinking.isNotBlank()) {
+                    if (toolLabel != null) {
+                        Text(
+                            toolLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else if (!expanded && thinking.isNotBlank()) {
                         Text(
                             thinking.lineSequence().firstOrNull()?.take(70) ?: "",
                             style = MaterialTheme.typography.labelSmall,

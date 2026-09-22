@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,6 +73,7 @@ fun ProviderListScreen(
                             p = p,
                             selected = p.id == selectedId,
                             onClick = { onSelect(p) },
+                            onEdit = { onEdit(p) },
                             onDelete = { deleteTarget = p }
                         )
                     }
@@ -115,6 +117,7 @@ private fun ProviderRow(
     p: ProviderEntity,
     selected: Boolean,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(
@@ -151,8 +154,13 @@ private fun ProviderRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Outlined.Edit, "Düzenle",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp))
+            }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Outlined.Delete, null,
+                Icon(Icons.Outlined.Delete, "Sil",
                     tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
             }
         }

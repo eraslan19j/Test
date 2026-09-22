@@ -24,49 +24,67 @@ object ProviderCatalog {
             requiresKey = true,
             keyUrl = "https://aistudio.google.com/apikey",
             isFree = true,
-            freeHint = "aistudio.google.com → Get API Key (ücretsiz)",
-            description = "Cömert ücretsiz tier · hızlı",
+            freeHint = "aistudio.google.com → Get API Key (ücretsiz, kart istemez)",
+            description = "ÖNERİLEN · Cömert ücretsiz tier · hızlı",
             availableModels = listOf(
                 "gemini-2.5-flash",
+                "gemini-2.5-flash-lite",
                 "gemini-2.5-pro",
                 "gemini-2.0-flash",
-                "gemini-2.0-flash-lite",
-                "gemini-1.5-flash",
-                "gemini-1.5-pro"
+                "gemini-2.0-flash-lite"
             )
         ),
         ProviderTemplate(
             type = "openai_compat",
-            displayName = "Groq Llama 3.3",
+            displayName = "Pollinations",
+            defaultBaseUrl = "https://text.pollinations.ai/openai",
+            defaultModel = "openai",
+            requiresKey = false,
+            keyUrl = "",
+            isFree = true,
+            freeHint = "Anahtar gerekmez — anında dene (demo kalitesinde)",
+            description = "ANAHTARSIZ · Kayıtsız deneme",
+            availableModels = listOf(
+                "openai",
+                "mistral",
+                "qwen-coder",
+                "deepseek"
+            )
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "Groq",
             defaultBaseUrl = "https://api.groq.com/openai/v1",
-            defaultModel = "llama-3.3-70b-versatile",
+            defaultModel = "openai/gpt-oss-120b",
             requiresKey = true,
             keyUrl = "https://console.groq.com/keys",
             isFree = true,
             freeHint = "console.groq.com → API Keys (ücretsiz)",
-            description = "Çok hızlı çıkarım",
+            description = "Çok hızlı çıkarım · açık modeller",
             availableModels = listOf(
-                "llama-3.3-70b-versatile",
-                "llama-3.1-8b-instant",
-                "gemma2-9b-it",
-                "mixtral-8x7b-32768"
+                "openai/gpt-oss-120b",
+                "openai/gpt-oss-20b",
+                "qwen/qwen3-32b",
+                "moonshotai/kimi-k2-instruct",
+                "meta-llama/llama-4-scout-17b-16e-instruct"
             )
         ),
         ProviderTemplate(
             type = "openai_compat",
-            displayName = "OpenRouter Gemini",
+            displayName = "OpenRouter",
             defaultBaseUrl = "https://openrouter.ai/api/v1",
-            defaultModel = "google/gemini-2.0-flash-exp:free",
+            defaultModel = "deepseek/deepseek-r1:free",
             requiresKey = true,
             keyUrl = "https://openrouter.ai/keys",
             isFree = true,
             freeHint = "openrouter.ai → Keys → :free modeller",
-            description = "Yüzlerce model · ücretsiz",
+            description = "Yüzlerce model · ücretsiz seçenekler",
             availableModels = listOf(
-                "google/gemini-2.0-flash-exp:free",
-                "meta-llama/llama-3.3-70b-instruct:free",
                 "deepseek/deepseek-r1:free",
-                "qwen/qwen-2.5-72b-instruct:free"
+                "meta-llama/llama-3.3-70b-instruct:free",
+                "qwen/qwen-2.5-72b-instruct:free",
+                "google/gemini-2.0-flash-exp:free",
+                "mistralai/mistral-small-3.1-24b-instruct:free"
             )
         ),
         ProviderTemplate(
@@ -77,19 +95,20 @@ object ProviderCatalog {
             requiresKey = true,
             keyUrl = "https://console.mistral.ai/api-keys",
             isFree = true,
-            freeHint = "console.mistral.ai → API Keys (ücretsiz)",
-            description = "Avrupa · 128k context",
+            freeHint = "console.mistral.ai → API Keys (ücretsiz deneme)",
+            description = "Avrupa · kodlama için Codestral",
             availableModels = listOf(
                 "mistral-small-latest",
+                "mistral-medium-latest",
                 "mistral-large-latest",
-                "open-mistral-nemo",
-                "codestral-latest"
+                "codestral-latest",
+                "open-mistral-nemo"
             )
         ),
         ProviderTemplate(
             type = "openai_compat",
             displayName = "DeepSeek",
-            defaultBaseUrl = "https://api.deepseek.com/v1",
+            defaultBaseUrl = "https://api.deepseek.com",
             defaultModel = "deepseek-chat",
             requiresKey = true,
             keyUrl = "https://platform.deepseek.com/api_keys",
@@ -101,45 +120,57 @@ object ProviderCatalog {
         ProviderTemplate(
             type = "openai_compat",
             displayName = "GitHub Models",
-            defaultBaseUrl = "https://models.inference.ai.azure.com",
-            defaultModel = "gpt-4o-mini",
+            defaultBaseUrl = "https://models.github.ai/inference",
+            defaultModel = "openai/gpt-4o-mini",
             requiresKey = true,
             keyUrl = "https://github.com/settings/tokens",
             isFree = true,
-            freeHint = "GitHub → Settings → Personal access tokens",
-            description = "GitHub ile ücretsiz · GPT-4o vb.",
-            availableModels = listOf("gpt-4o", "gpt-4o-mini", "o1-mini", "o3-mini")
+            freeHint = "GitHub → Settings → Personal access tokens (models:read)",
+            description = "GitHub hesabınla ücretsiz kotalar",
+            availableModels = listOf(
+                "openai/gpt-4o-mini",
+                "openai/gpt-4o",
+                "openai/gpt-4.1-mini",
+                "deepseek/DeepSeek-V3-0324",
+                "meta/Llama-3.3-70B-Instruct"
+            )
         ),
     )
 
+    /**
+     * Diğer / ücretli / özel uçlar. Hepsi OpenAI-uyumlu (/chat/completions) olmalı.
+     * NOT: Anthropic burada YOK — Claude API'si OpenAI protokolüyle uyumsuz
+     * (/v1/messages kullanır). Ayrı bir ClaudeProvider yazılmadan eklenemez.
+     */
     val types = listOf(
         ProviderTemplate("openai_compat", "OpenAI",
             "https://api.openai.com/v1", "gpt-4o-mini", true,
             keyUrl = "https://platform.openai.com/api-keys",
-            availableModels = listOf("gpt-4o-mini", "gpt-4o")),
-        ProviderTemplate("openai_compat", "Anthropic",
-            "https://api.anthropic.com/v1", "claude-3-5-haiku-20241022", true,
-            keyUrl = "https://console.anthropic.com/settings/keys",
-            availableModels = listOf("claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022")),
+            description = "Ücretli · referans kalite",
+            availableModels = listOf("gpt-4o-mini", "gpt-4o", "gpt-4.1-mini")),
         ProviderTemplate("openai_compat", "Grok (xAI)",
             "https://api.x.ai/v1", "grok-3-mini", true,
             keyUrl = "https://console.x.ai/",
-            availableModels = listOf("grok-3-mini", "grok-3")),
-        ProviderTemplate("openai_compat", "DeepSeek",
-            "https://api.deepseek.com/v1", "deepseek-chat", true,
-            keyUrl = "https://platform.deepseek.com/api_keys",
-            availableModels = listOf("deepseek-chat", "deepseek-reasoner")),
+            description = "Ücretli",
+            availableModels = listOf("grok-3-mini", "grok-3", "grok-4")),
+        ProviderTemplate("openai_compat", "Özel uç",
+            "https://", "model-id", false,
+            description = "Kendi sunucun (Ollama, vLLM, LM Studio…)",
+            availableModels = emptyList()),
     )
 
-    fun byType(type: String): ProviderTemplate? = types.firstOrNull { it.type == type }
-    fun byName(name: String): ProviderTemplate? = presets.firstOrNull { it.displayName == name }
+    fun byType(type: String): ProviderTemplate? =
+        (presets + types).firstOrNull { it.type == type }
+
+    fun byName(name: String): ProviderTemplate? =
+        (presets + types).firstOrNull { it.displayName == name }
 
     /** Base URL prefix eşleşmesiyle preset bul */
     fun byBaseUrl(url: String): ProviderTemplate? {
         val host = url.substringAfter("://").substringBefore("/")
-        return presets.firstOrNull { p ->
+        return (presets + types).firstOrNull { p ->
             val presetHost = p.defaultBaseUrl.substringAfter("://").substringBefore("/")
-            host == presetHost
+            host.isNotBlank() && host == presetHost
         }
     }
 

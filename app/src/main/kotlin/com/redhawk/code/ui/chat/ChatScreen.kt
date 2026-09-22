@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -46,6 +48,11 @@ fun ChatScreen(
     var showQuickActions by remember { mutableStateOf(false) }
     var showModelPicker by remember { mutableStateOf(false) }
 
+    // Proje klasörü seçici (SAF): kalıcı okuma/yazma izni alınır
+    val folderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri -> if (uri != null) vm.setProjectFolder(uri) }
+
     LaunchedEffect(state.messages.size,
         state.messages.lastOrNull()?.content,
         state.messages.lastOrNull()?.thinking) {
@@ -70,6 +77,11 @@ fun ChatScreen(
                     IconButton(onClick = onOpenDrawer) { Icon(Icons.Filled.Menu, null) }
                 },
                 actions = {
+                    IconButton(onClick = vm::toggleAgent) {
+                        Icon(Icons.Outlined.SmartToy, "Ajan modu",
+                            tint = if (state.agentMode) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     IconButton(onClick = onOpenChats) { Icon(Icons.Outlined.History, "Sohbetler") }
                     IconButton(onClick = { showModelPicker = true }) { Icon(Icons.Outlined.Memory, "Model seç") }
                     IconButton(onClick = { vm.newChat() }) { Icon(Icons.Filled.Add, "Yeni") }
@@ -116,6 +128,50 @@ fun ChatScreen(
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(10.dp))
+                    }
+                }
+            }
+
+            if (!state.modelReady) {
+                Surface(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(10.dp)).clickable { onOpenModels() },
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Key, null,
+                            tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Yapay zekayı kullanmak için sağlayıcı kur",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f))
+                        Icon(Icons.Filled.ChevronRight, null,
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            if (state.agentMode) {
+                Surface(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(10.dp)).clickable { folderPicker.launch(null) },
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                ) {
+                    Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.SmartToy, null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Ajan açık · ${state.projectLabel.ifBlank { "Uygulama deposu" }}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f))
+                        Text("Klasör değiştir",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -180,15 +236,39 @@ fun ChatScreen(
     if (showQuickActions) {
         QuickActionsSheet(
             enabledSkills = state.enabledSkills,
+            agentMode = state.agentMode,
+            onToggleAgent = vm::toggleAgent,
             onToggleSkill = vm::toggleSkill,
             onPickAction = { a ->
                 showQuickActions = false
                 when (a) {
-                    "project" -> onOpenProject()
-                    "permissions" -> onOpenPermissions()
+                    "project" -> folderPicker.launch(null)
                 }
             },
             onDismiss = { showQuickActions = false }
+        )
+    }
+
+    // Dosya yazma onayı (ajan modu)
+    state.pendingApproval?.let { ap ->
+        AlertDialog(
+            onDismissRequest = { /* bilinçli seçim şart: boş bırakıldı */ },
+            title = { Text("Dosya işlemine izin verilsin mi?") },
+            text = {
+                Column {
+                    Text(ap.call.name,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(8.dp))
+                    Text(ap.preview, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { vm.approveTool(true) }) { Text("Onayla") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.approveTool(false) }) { Text("Reddet") }
+            }
         )
     }
 }
@@ -211,8 +291,8 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
 
     // Asistan
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-        // Thinking paneli
-        if (m.thinking.isNotBlank() || m.thinkingStreaming) {
+        // Thinking paneli (araç çalışırken de görünür)
+        if (m.thinking.isNotBlank() || m.thinkingStreaming || m.toolLabel != null) {
             ThinkingPanel(
                 thinking = m.thinking,
                 thinkingMs = m.thinkingMs,

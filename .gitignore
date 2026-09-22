@@ -45,3 +45,7 @@ obj/
 
 # Logs
 *.log
+
+# AndroidIDE / local native cmake cache
+.cxx/
+app/.cxx/

@@ -24,6 +24,8 @@ import com.redhawk.code.data.skills.SkillCatalog
 @Composable
 fun QuickActionsSheet(
     enabledSkills: Set<String>,
+    agentMode: Boolean,
+    onToggleAgent: () -> Unit,
     onToggleSkill: (String) -> Unit,
     onPickAction: (String) -> Unit,
     onDismiss: () -> Unit
@@ -56,76 +58,22 @@ fun QuickActionsSheet(
             }
             Spacer(Modifier.height(12.dp))
 
-            // 4 kare kart
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                QuickCard(
-                    title = "Görsel / Dosya",
-                    subtitle = "Fotoğraf veya döküman",
-                    icon = Icons.Outlined.Add,
-                    modifier = Modifier.weight(1f)
-                ) { onPickAction("attach") }
-
-                QuickCard(
-                    title = "Görev Listesi",
-                    subtitle = "Aktif görevleri incele",
-                    icon = Icons.Outlined.Checklist,
-                    modifier = Modifier.weight(1f)
-                ) { onPickAction("tasks") }
-            }
-            Spacer(Modifier.height(10.dp))
+            // Çalışan kartlar: proje klasörü + ajan modu
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickCard(
                     title = "Çalışma Alanı",
-                    subtitle = "Proje kök dizinini seç",
+                    subtitle = "Proje klasörünü seç",
                     icon = Icons.Outlined.Folder,
                     modifier = Modifier.weight(1f)
                 ) { onPickAction("project") }
 
                 QuickCard(
-                    title = "Beceriler",
-                    subtitle = "Yetenekleri yönet",
-                    icon = Icons.Outlined.AutoAwesome,
-                    modifier = Modifier.weight(1f)
-                ) { onPickAction("skills") }
-            }
-            Spacer(Modifier.height(10.dp))
-
-            // İzin kartı
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { onPickAction("permissions") },
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Outlined.Shield, null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("İzin ve Güvenlik Matrisi", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Terminal ve dosya yazma izinlerini ayarla",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Icon(
-                        Icons.Outlined.ChevronRight, null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                    title = "Ajan Modu",
+                    subtitle = if (agentMode) "Açık — kapatmak için dokun" else "Kapalı — açmak için dokun",
+                    icon = Icons.Outlined.SmartToy,
+                    modifier = Modifier.weight(1f),
+                    highlight = agentMode
+                ) { onToggleAgent() }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -205,13 +153,17 @@ private fun QuickCard(
     subtitle: String,
     icon: ImageVector,
     modifier: Modifier,
+    highlight: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = if (highlight) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                else MaterialTheme.colorScheme.surfaceVariant,
+        border = if (highlight) androidx.compose.foundation.BorderStroke(
+            1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)) else null
     ) {
         Column(Modifier.padding(14.dp)) {
             Box(

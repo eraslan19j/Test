@@ -45,8 +45,11 @@ class ChatRepository(ctx: Context) {
     /** Otomatik başlık: ilk kullanıcı mesajının ilk 40 karakteri */
     suspend fun autoTitle(chatId: String): String? {
         val chat = chatDao.get(chatId) ?: return null
-        if (chat.title != "Yeni sohbet") return null
-        val first = msgDao.observeForChat(chatId)
-        return null
+        if (chat.title != "Yeni sohbet") return chat.title
+        val first = msgDao.firstUserMessage(chatId) ?: return null
+        val title = first.content.trim().replace("\n", " ").take(40).trim()
+        if (title.isBlank()) return null
+        chatDao.rename(chatId, title)
+        return title
     }
 }

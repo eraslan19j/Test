@@ -3,6 +3,7 @@ package com.redhawk.code.llm.provider
 import com.redhawk.code.llm.LlmEvent
 import com.redhawk.code.llm.LlmProvider
 import com.redhawk.code.llm.model.ChatMessage
+import com.redhawk.code.llm.model.ToolCall
 import com.redhawk.code.llm.model.ToolSpec
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -54,6 +55,12 @@ class OpenAiCompatProvider(
         }
 
         val listener = object : EventSourceListener() {
+            // Tool call parçaları stream boyunca birikir, finish_reason gelince yayınlanır
+            var toolId: String? = null
+            var toolName: String? = null
+            val toolArgs = StringBuilder()
+            var sawToolCall = false
+
             override fun onEvent(es: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") { trySend(LlmEvent.Done); close(); return }
                 parseChunk(data)?.let { trySend(it) }
@@ -81,6 +88,40 @@ class OpenAiCompatProvider(
             }
 
             override fun onClosed(es: EventSource) { trySend(LlmEvent.Done); close() }
+
+            private fun parseChunk(data: String): LlmEvent? = try {
+                val obj = json.parseToJsonElement(data).jsonObject
+                val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
+                val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
+                val delta = choice["delta"]?.jsonObject
+
+                // Tool call parçası mı? (id/name ilk parçada, arguments parça parça gelir)
+                val tc = delta?.get("tool_calls")?.jsonArray?.firstOrNull()?.jsonObject
+                if (tc != null) {
+                    sawToolCall = true
+                    tc["id"]?.jsonPrimitive?.contentOrNull
+                        ?.takeIf { it.isNotBlank() }?.let { toolId = it }
+                    val fn = tc["function"]?.jsonObject
+                    fn?.get("name")?.jsonPrimitive?.contentOrNull
+                        ?.takeIf { it.isNotBlank() }?.let { toolName = it }
+                    fn?.get("arguments")?.jsonPrimitive?.contentOrNull
+                        ?.let { toolArgs.append(it) }
+                }
+
+                if (finish == "tool_calls" && sawToolCall) {
+                    sawToolCall = false
+                    return LlmEvent.ToolCallRequested(
+                        ToolCall(
+                            id = toolId ?: "call_${System.currentTimeMillis()}",
+                            name = toolName ?: "",
+                            argumentsJson = toolArgs.toString().ifBlank { "{}" }
+                        )
+                    )
+                }
+
+                val content = delta?.get("content")?.jsonPrimitive?.contentOrNull
+                if (!content.isNullOrEmpty()) LlmEvent.TextDelta(content) else null
+            } catch (_: Exception) { null }
         }
 
         val es = EventSources.createFactory(client).newEventSource(reqB.build(), listener)
@@ -101,7 +142,21 @@ class OpenAiCompatProvider(
                         put("role", m.role.name.lowercase())
                         put("content", m.content)
                         if (m.toolCallId != null) put("tool_call_id", m.toolCallId)
-                        if (m.toolName != null && m.role.name == "TOOL") put("name", m.toolName)
+                        // Ajan turunda asistanın yaptığı çağrılar (bazı uçlar şart koşar)
+                        if (m.toolCalls.isNotEmpty()) {
+                            putJsonArray("tool_calls") {
+                                m.toolCalls.forEach { tc ->
+                                    addJsonObject {
+                                        put("id", tc.id)
+                                        put("type", "function")
+                                        putJsonObject("function") {
+                                            put("name", tc.name)
+                                            put("arguments", tc.argumentsJson)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -122,12 +177,4 @@ class OpenAiCompatProvider(
         }
         return root.toString()
     }
-
-    private fun parseChunk(data: String): LlmEvent? = try {
-        val obj = json.parseToJsonElement(data).jsonObject
-        val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject
-        val delta = choice?.get("delta")?.jsonObject
-        val content = delta?.get("content")?.jsonPrimitive?.contentOrNull
-        if (!content.isNullOrEmpty()) LlmEvent.TextDelta(content) else null
-    } catch (_: Exception) { null }
 }
