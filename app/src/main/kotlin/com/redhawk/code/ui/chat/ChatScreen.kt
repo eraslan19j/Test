@@ -275,10 +275,14 @@ fun ChatScreen(
 private fun MessageItem(m: UiMessage, ctx: Context) {
     if (m.isUser) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+            val userShape = RoundedCornerShape(
+                topStart = 16.dp, topEnd = 4.dp,
+                bottomStart = 16.dp, bottomEnd = 16.dp
+            )
             Box(
                 Modifier.widthIn(max = 320.dp)
-                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
-                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary, userShape)
+                    .clip(userShape)
                     .clickable {
                         // Kendi mesajına dokun → kopyala
                         (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
@@ -312,9 +316,17 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
         // Cevap
         val showBubble = m.content.isNotBlank() || !m.thinkingStreaming
         if (showBubble) {
+            val bubbleShape = RoundedCornerShape(
+                topStart = 4.dp, topEnd = 16.dp,
+                bottomStart = 16.dp, bottomEnd = 16.dp
+            )
             Box(
                 Modifier.widthIn(max = 330.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
+                    .background(
+                        if (m.streaming) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                        bubbleShape
+                    )
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 if (m.content.isEmpty() && m.streaming) {
@@ -324,10 +336,11 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                         infiniteRepeatable(tween(1200, easing = LinearEasing),
                             RepeatMode.Restart),
                         label = "ph")
-                    // 1 saatlik tek-seferlik animasyon = açılıştan beri geçen süre
-                    val elapsed by inf.animateFloat(0f, 3600f,
-                        tween(3_600_000, easing = LinearEasing),
-                        label = "clock")
+                    // Canlı süre sayacı (1 sn'de bir güncellenir)
+                    var secs by remember(m.id) { mutableStateOf(0) }
+                    LaunchedEffect(m.id) {
+                        while (true) { kotlinx.coroutines.delay(1000); secs++ }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         repeat(3) { i ->
                             val a = 0.25f + 0.75f *
@@ -341,7 +354,7 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
                             if (i < 2) Spacer(Modifier.width(6.dp))
                         }
                         Spacer(Modifier.width(10.dp))
-                        Text("yazıyor… ${elapsed.toInt()} sn",
+                        Text("yazıyor… $secs sn",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
