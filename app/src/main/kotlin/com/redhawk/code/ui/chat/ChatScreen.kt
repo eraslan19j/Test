@@ -53,11 +53,14 @@ fun ChatScreen(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> if (uri != null) vm.setProjectFolder(uri) }
 
+    // PERF: akış sırasında animasyonsuz kaydır (her token'da animate = kasma),
+    // normal geçişlerde animasyonlu kaydır.
     LaunchedEffect(state.messages.size,
         state.messages.lastOrNull()?.content,
         state.messages.lastOrNull()?.thinking) {
         if (state.messages.isNotEmpty()) {
-            listState.animateScrollToItem(state.messages.lastIndex)
+            if (state.isStreaming) listState.scrollToItem(state.messages.lastIndex)
+            else listState.animateScrollToItem(state.messages.lastIndex)
         }
     }
 
@@ -106,13 +109,8 @@ fun ChatScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     itemsIndexed(state.messages, key = { _, m -> m.id }) { _, m ->
-                        AnimatedVisibility(
-                            visible = true,
-                            enter = fadeIn(tween(200)) + slideInVertically(
-                                initialOffsetY = { it / 5 }, animationSpec = tween(200))
-                        ) {
-                            MessageItem(m, ctx)
-                        }
+                        // PERF: her satırda giriş animasyonu yok (uzun sohbette kasma yapıyordu)
+                        MessageItem(m, ctx)
                     }
                 }
             }
@@ -296,6 +294,7 @@ private fun MessageItem(m: UiMessage, ctx: Context) {
             ThinkingPanel(
                 thinking = m.thinking,
                 thinkingMs = m.thinkingMs,
+                totalMs = m.totalMs,
                 isStreaming = m.thinkingStreaming,
                 toolLabel = m.toolLabel
             )

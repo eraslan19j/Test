@@ -18,7 +18,9 @@ interface LlmProvider {
     fun chat(
         messages: List<ChatMessage>,
         tools: List<ToolSpec> = emptyList(),
-        model: String
+        model: String,
+        temperature: Float = 0.7f,
+        maxTokens: Int = 2048
     ): Flow<LlmEvent>
 }
 

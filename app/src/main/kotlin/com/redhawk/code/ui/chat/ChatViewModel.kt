@@ -329,6 +329,9 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     val agentOn = _state.value.agentMode
                     val sysPromptBase = prefs.systemPrompt.first()
                     val sysPrompt = buildSystemPrompt(sysPromptBase, agentOn)
+                    // Ayarlardan: sıcaklık + maksimum token (gerçekten uygulanır)
+                    val temp = prefs.temperature.first()
+                    val maxTok = prefs.maxTokens.first()
 
                     val history = _state.value.messages
                         .filter { it.id != userMsg.id && it.id != assistantMsg.id && !it.streaming }
@@ -367,7 +370,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     do {
                         pendingTool = null
                         val roundStart = streamingRaw.length
-                        p.chat(convo, tools, modelId).collect { ev ->
+                        p.chat(convo, tools, modelId, temp, maxTok).collect { ev ->
                             if (stopRequested) return@collect
                             when (ev) {
                                 is LlmEvent.TextDelta -> {
@@ -496,11 +499,14 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         const val MAX_AGENT_ROUNDS = 5
         const val AGENT_PROMPT =
-            "AJAN MODU: Dosya araçların var (list_files, read_file, write_file). " +
+            "AJAN MODU: Araçların var: list_files, read_file, write_file (dosyalar), " +
+            "web_search ve fetch_url (internet). " +
             "Kullanıcı kod/proje işi isterse önce list_files ile klasöre bak, " +
             "gerekirse read_file ile oku, sonucu write_file ile yaz. " +
+            "Güncel bilgi, kütüphane dokümantasyonu veya hata çözümü gerekiyorsa " +
+            "web_search ile ara, gerekirse fetch_url ile sayfayı oku. " +
             "write_file öncesi kullanıcıdan onay istenir, reddedilirse ısrar etme. " +
             "Yollar çalışma köküne göredir (örn: 'Main.kt', 'src/app.py'). " +
-            "Türkçe konuş, açıklamaları kısa tut, yaptığın dosya işlemlerini maddelerle özetle."
+            "Türkçe konuş, açıklamaları kısa tut, yaptığın işlemleri maddelerle özetle."
     }
 }

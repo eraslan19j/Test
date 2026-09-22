@@ -47,8 +47,10 @@ object ProviderCatalog {
             availableModels = listOf(
                 "openai",
                 "mistral",
+                "gemini",
+                "deepseek",
                 "qwen-coder",
-                "deepseek"
+                "claude"
             )
         ),
         ProviderTemplate(

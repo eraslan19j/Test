@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,15 +23,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Test APK tarzı düşünme paneli.
- * - Streaming sırasında otomatik açık, canlı yazıyor
- * - Bitince otomatik kapanır, "X.Xs düşündü" başlığı
- * - Kullanıcı tıklarsa aç/kapa
+ * Canlı aktivite paneli (ajan tarzı):
+ * - Streaming sırasında: durum ("Düşünüyor…", "Yazıyor…", "⚙ araç…") + CANLI süre
+ * - Bitince: "Düşündü · 4.5s" + açılır düşünme metni
+ * - totalMs ViewModel'den ~60ms'de bir tazelendiği için süre kendiliğinden işler.
  */
 @Composable
 fun ThinkingPanel(
     thinking: String,
     thinkingMs: Long,
+    totalMs: Long = 0L,
     isStreaming: Boolean,
     toolLabel: String? = null,
     defaultExpanded: Boolean = false
@@ -40,12 +42,22 @@ fun ThinkingPanel(
     var userToggled by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(defaultExpanded) }
 
-    // Streaming başlayınca aç, bitince kapat (kullanıcı toggle'lamadıysa)
+    // Streaming başlayınca aç, bitince kapat (kullanıcı oynamadıysa)
     LaunchedEffect(isStreaming) {
         if (!userToggled) {
             expanded = isStreaming
         }
     }
+
+    val status = when {
+        toolLabel != null -> toolLabel
+        isStreaming && thinking.isNotBlank() -> "Düşünüyor…"
+        isStreaming -> "Yazıyor…"
+        thinking.isNotBlank() -> "Düşündü"
+        else -> "Tamamlandı"
+    }
+    // Canlı süre: akışta toplam, bitince düşünme süresi
+    val liveMs = if (isStreaming) totalMs else if (thinkingMs > 0) thinkingMs else totalMs
 
     Surface(
         modifier = Modifier
@@ -65,7 +77,8 @@ fun ThinkingPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Outlined.Psychology, null,
+                    if (toolLabel != null) Icons.Outlined.SmartToy else Icons.Outlined.Psychology,
+                    null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -73,31 +86,22 @@ fun ThinkingPanel(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            when {
-                                isStreaming -> "Düşünüyor…"
-                                thinking.isNotBlank() -> "Düşündü"
-                                else -> "Bekliyor…"
-                            },
+                            status,
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
                         )
-                        if (thinkingMs > 0 && !isStreaming) {
+                        if (liveMs > 0) {
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                ThinkingParser.formatDuration(thinkingMs),
+                                ThinkingParser.formatDuration(liveMs),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
-                    if (toolLabel != null) {
-                        Text(
-                            toolLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    } else if (!expanded && thinking.isNotBlank()) {
+                    if (!expanded && thinking.isNotBlank() && toolLabel == null) {
                         Text(
                             thinking.lineSequence().firstOrNull()?.take(70) ?: "",
                             style = MaterialTheme.typography.labelSmall,
@@ -108,13 +112,13 @@ fun ThinkingPanel(
                 }
                 if (isStreaming) {
                     ThinkingDots()
-                } else {
-                    Icon(
-                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Spacer(Modifier.width(8.dp))
                 }
+                Icon(
+                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                    null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             AnimatedVisibility(

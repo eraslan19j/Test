@@ -37,9 +37,11 @@ class OpenAiCompatProvider(
     override fun chat(
         messages: List<ChatMessage>,
         tools: List<ToolSpec>,
-        model: String
+        model: String,
+        temperature: Float,
+        maxTokens: Int
     ): Flow<LlmEvent> = callbackFlow {
-        val body = buildBody(messages, tools, model)
+        val body = buildBody(messages, tools, model, temperature, maxTokens)
         val url = baseUrl.trimEnd('/') + "/chat/completions"
 
         val reqB = Request.Builder()
@@ -133,11 +135,15 @@ class OpenAiCompatProvider(
     private fun buildBody(
         messages: List<ChatMessage>,
         tools: List<ToolSpec>,
-        model: String
+        model: String,
+        temperature: Float,
+        maxTokens: Int
     ): String {
         val root = buildJsonObject {
             put("model", model)
             put("stream", true)
+            put("temperature", temperature)
+            put("max_tokens", maxTokens)
             putJsonArray("messages") {
                 messages.forEach { m ->
                     addJsonObject {

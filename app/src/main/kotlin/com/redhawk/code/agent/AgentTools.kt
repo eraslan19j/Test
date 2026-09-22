@@ -6,7 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Ajana sunulan araçlar (Faz 1: dosya işlemleri).
+ * Ajana sunulan araçlar (Faz 2: dosyalar + internet).
  * Yeni araç eklemek = listeye ToolSpec + execute dalı eklemek.
  */
 object AgentTools {
@@ -26,6 +26,16 @@ object AgentTools {
             name = "write_file",
             description = "Bir dosyaya metin yazar. Dosya yoksa gerekli klasörlerle birlikte oluşturur, varsa ÜZERİNE YAZAR. content dosyanın TAM yeni içeriği olmalıdır. Bu işlem kullanıcı onayından geçer.",
             parametersJsonSchema = """{"type":"object","properties":{"path":{"type":"string","description":"Dosya yolu"},"content":{"type":"string","description":"Dosyanın tam yeni içeriği"}},"required":["path","content"]}"""
+        ),
+        ToolSpec(
+            name = "web_search",
+            description = "İnternette arama yapar (DuckDuckGo, ücretsiz). Güncel bilgi, dokümantasyon, hata çözümleri için kullan. İlk 5 sonucu döndürür.",
+            parametersJsonSchema = """{"type":"object","properties":{"query":{"type":"string","description":"Aranacak metin"}},"required":["query"]}"""
+        ),
+        ToolSpec(
+            name = "fetch_url",
+            description = "Bir web sayfasını okuyup düz metne çevirir (en fazla 8000 karakter). Dokümantasyon ve makale okumak için kullan.",
+            parametersJsonSchema = """{"type":"object","properties":{"url":{"type":"string","description":"http(s) ile başlayan sayfa adresi"}},"required":["url"]}"""
         )
     )
 
@@ -48,6 +58,14 @@ object AgentTools {
                 val p = arg(argsJson, "path")
                 if (p.isBlank()) "HATA: path gerekli."
                 else ProjectFiles.write(ctx, projectUri, p, arg(argsJson, "content"))
+            }
+            "web_search" -> {
+                val q = arg(argsJson, "query")
+                if (q.isBlank()) "HATA: query gerekli." else WebTools.search(q)
+            }
+            "fetch_url" -> {
+                val u = arg(argsJson, "url")
+                if (u.isBlank()) "HATA: url gerekli." else WebTools.fetch(u)
             }
             else -> "HATA: bilinmeyen araç '$name'."
         }

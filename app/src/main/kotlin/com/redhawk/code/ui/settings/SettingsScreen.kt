@@ -22,6 +22,10 @@ import androidx.compose.ui.unit.dp
 import com.redhawk.code.data.prefs.PrefsStore
 import kotlinx.coroutines.launch
 
+/**
+ * Ayarlar — buradaki HER şey çalışır durumda:
+ * model davranışı (sistem promptu, sıcaklık, token) doğrudan sohbete uygulanır.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -38,7 +42,13 @@ fun SettingsScreen(
     val fastMode by prefs.fastMode.collectAsState(initial = false)
     val showContext by prefs.showContextUsage.collectAsState(initial = true)
     val suggested by prefs.suggestedPrompts.collectAsState(initial = true)
-    val extensions by prefs.extensionsEnabled.collectAsState(initial = true)
+    val temperature by prefs.temperature.collectAsState(initial = 0.7f)
+    val maxTokens by prefs.maxTokens.collectAsState(initial = 2048)
+    val systemPrompt by prefs.systemPrompt.collectAsState(
+        initial = PrefsStore.DEFAULT_SYSTEM_PROMPT
+    )
+
+    var showPromptDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -64,23 +74,36 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(20.dp))
 
-            SectionTitle("Genel")
-            SettingRow(Icons.Outlined.Folder, "Projesiz görev klasörü",
-                "Proje dışında başlatılan görevlerin saklandığı yer",
-                trailingText = "Ayarlanmadı") { }
-            SettingRow(Icons.Outlined.Description, "Varsayılan dosya açıcı",
-                "Üretilen dosyaların nerede açılacağını seçin",
-                trailingText = "ReDHawK Code") { }
-            SettingRow(Icons.Outlined.Terminal, "Entegre terminal kabuğu",
-                "Yeni terminal açıldığında kullanılacak ortam",
-                trailingText = "Ubuntu · bash") { }
-            SettingRow(Icons.Outlined.Shield, "Terminal şifresi",
-                "Terminal araçları yönetici erişimi istediğinde kullanılacak",
-                trailingText = "Değiştir") { }
-            SettingRow(Icons.Outlined.Language, "Dil",
-                "Uygulama arayüzü dili",
-                trailingText = "Otomatik") { }
+            SectionTitle("Model Davranışı")
+            SettingRow(Icons.Outlined.Psychology, "Sistem promptu",
+                "Yapay zekanın temel talimatı — sohbete anında uygulanır",
+                trailingText = "Düzenle",
+                onClick = { showPromptDialog = true })
 
+            SliderRow(
+                icon = Icons.Outlined.Thermostat,
+                title = "Sıcaklık",
+                subtitle = "Düşük = tutarlı, yüksek = yaratıcı",
+                valueLabel = String.format("%.1f", temperature),
+                value = temperature,
+                range = 0f..1f,
+                onChange = { scope.launch { prefs.setTemperature(it) } }
+            )
+
+            SliderRow(
+                icon = Icons.Outlined.TextFields,
+                title = "Maksimum token",
+                subtitle = "Tek yanıtta üretilecek en fazla token",
+                valueLabel = "$maxTokens",
+                value = maxTokens.toFloat(),
+                range = 256f..8192f,
+                steps = 31,
+                onChange = { scope.launch { prefs.setMaxTokens(it.toInt()) } }
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            SectionTitle("Sohbet")
             SettingToggle(Icons.Outlined.Psychology, "Context penceresini göster",
                 "Context kullanımını sohbetin yanında görünür tutun",
                 showContext) { scope.launch { prefs.setShowContextUsage(it) } }
@@ -92,14 +115,6 @@ fun SettingsScreen(
             SettingToggle(Icons.Outlined.AutoAwesome, "Önerilen promptlar",
                 "Yazarken komut ve beceri önerilerini göster",
                 suggested) { scope.launch { prefs.setSuggestedPrompts(it) } }
-
-            SettingToggle(Icons.Outlined.Extension, "Eklentiler",
-                "Kurulu eklentilerin AI çalışma alanında kullanılmasına izin ver",
-                extensions) { scope.launch { prefs.setExtensionsEnabled(it) } }
-
-            SettingRow(Icons.Outlined.Info, "Açık kaynak lisansları",
-                "Paketlenmiş bağımlılıkların lisans bilgileri",
-                trailingText = "Görüntüle", onClick = onOpenLicenses)
 
             Spacer(Modifier.height(24.dp))
 
@@ -134,6 +149,37 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(40.dp))
         }
+    }
+
+    if (showPromptDialog) {
+        var text by remember { mutableStateOf(systemPrompt) }
+        AlertDialog(
+            onDismissRequest = { showPromptDialog = false },
+            title = { Text("Sistem promptu") },
+            text = {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch { prefs.setSystemPrompt(text) }
+                    showPromptDialog = false
+                }) { Text("Kaydet") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        scope.launch { prefs.setSystemPrompt(PrefsStore.DEFAULT_SYSTEM_PROMPT) }
+                        showPromptDialog = false
+                    }) { Text("Varsayılan") }
+                    TextButton(onClick = { showPromptDialog = false }) { Text("İptal") }
+                }
+            }
+        )
     }
 }
 
@@ -206,5 +252,39 @@ fun SettingToggle(
         }
         Switch(checked = checked, onCheckedChange = onToggle)
     }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+}
+
+@Composable
+private fun SliderRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    valueLabel: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    onChange: (Float) -> Unit
+) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Medium)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(valueLabel, style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary)
+    }
+    Slider(
+        value = value,
+        onValueChange = onChange,
+        valueRange = range,
+        steps = steps,
+        modifier = Modifier.padding(horizontal = 8.dp)
+    )
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 }
