@@ -10,7 +10,9 @@ data class ProviderTemplate(
     val isFree: Boolean = false,
     val freeHint: String = "",
     val description: String = "",
-    val availableModels: List<String> = emptyList()
+    val availableModels: List<String> = emptyList(),
+    val tokenLimit: String = "",
+    val supportsTools: Boolean = true
 )
 
 object ProviderCatalog {
@@ -32,7 +34,9 @@ object ProviderCatalog {
                 "gemini-2.5-pro",
                 "gemini-2.0-flash",
                 "gemini-2.0-flash-lite"
-            )
+            ),
+            tokenLimit = "1M",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -51,7 +55,9 @@ object ProviderCatalog {
                 "deepseek",
                 "qwen-coder",
                 "claude"
-            )
+            ),
+            tokenLimit = "32K",
+            supportsTools = false
         ),
         ProviderTemplate(
             type = "duckai",
@@ -68,7 +74,9 @@ object ProviderCatalog {
                 "meta-llama/Llama-3.3-70B-Instruct-Turbo",
                 "claude-3-haiku-20240307",
                 "mistralai/Mixtral-8x7B-Instruct-v0.1"
-            )
+            ),
+            tokenLimit = "4K",
+            supportsTools = false
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -85,7 +93,9 @@ object ProviderCatalog {
                 "moonshotai/kimi-k2-instruct",
                 "meta/llama-3.1-70b-instruct",
                 "nvidia/llama-3.1-nemotron-70b-instruct"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -101,7 +111,9 @@ object ProviderCatalog {
                 "glm-4-flash",
                 "glm-4v-flash",
                 "glm-4-plus"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -115,7 +127,9 @@ object ProviderCatalog {
             description = "ÜCRETSİZ KOTA · Atria Dawn agentic (OpenAI uyumlu)",
             availableModels = listOf(
                 "Atria-Dawn-Preview"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -143,7 +157,9 @@ object ProviderCatalog {
                 "gpt-oss-120b",
                 "mercury-2.5",
                 "minimax-m3"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -159,7 +175,9 @@ object ProviderCatalog {
                 "DeepSeek-V4-Flash-0731",
                 "GLM-5.3-Flash",
                 "codestral-latest"
-            )
+            ),
+            tokenLimit = "64K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -179,7 +197,9 @@ object ProviderCatalog {
                 "Meta-Llama-3_3-70B-Instruct",
                 "Mistral-Small-3.2-24B-Instruct-2506",
                 "Mistral-Nemo-Instruct-2407"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -193,7 +213,9 @@ object ProviderCatalog {
             description = "100M TOKEN · MiniMax M2.7 (OpenAI uyumlu)",
             availableModels = listOf(
                 "MiniMaxAI/MiniMax-M2.7"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -208,7 +230,9 @@ object ProviderCatalog {
             availableModels = listOf(
                 "claude-sonnet-4.5",
                 "qwen-3.8-max-free"
-            )
+            ),
+            tokenLimit = "200K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -226,7 +250,9 @@ object ProviderCatalog {
                 "qwen/qwen3-32b",
                 "moonshotai/kimi-k2-instruct",
                 "meta-llama/llama-4-scout-17b-16e-instruct"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -243,8 +269,29 @@ object ProviderCatalog {
                 "meta-llama/llama-3.3-70b-instruct:free",
                 "qwen/qwen-2.5-72b-instruct:free",
                 "google/gemini-2.0-flash-exp:free",
-                "mistralai/mistral-small-3.1-24b-instruct:free"
-            )
+                "mistralai/mistral-small-3.1-24b-instruct:free",
+                "poolside/laguna-s-2.1:free",
+                "nvidia/nemotron-3-ultra-550b-a55b:free",
+                "dots-studio/dots-3-note-preview:free",
+                "nex-agi/nex-n2.5-pro:free",
+                "inclusionai/ling-3.0-flash-vl:free"
+            ),
+            tokenLimit = "16K",
+            supportsTools = true
+        ),
+        ProviderTemplate(
+            type = "openai_compat",
+            displayName = "Kilo Auto",
+            defaultBaseUrl = "https://api-inference.huggingface.co/v1",
+            defaultModel = "kilo-auto/free",
+            requiresKey = false,
+            keyUrl = "https://huggingface.co/settings/tokens",
+            isFree = true,
+            freeHint = "HF token ile ücretsiz (dakikada 30K token)",
+            description = "ANAHTARSIZ · Kilo otomatik yönlendirme (multimodal)",
+            availableModels = listOf("kilo-auto/free"),
+            tokenLimit = "16K",
+            supportsTools = false
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -262,7 +309,9 @@ object ProviderCatalog {
                 "mistral-large-latest",
                 "codestral-latest",
                 "open-mistral-nemo"
-            )
+            ),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -274,7 +323,9 @@ object ProviderCatalog {
             isFree = false,
             freeHint = "platform.deepseek.com → API Keys",
             description = "Ucuz · kaliteli · düşünme desteği",
-            availableModels = listOf("deepseek-chat", "deepseek-reasoner")
+            availableModels = listOf("deepseek-chat", "deepseek-reasoner"),
+            tokenLimit = "128K",
+            supportsTools = true
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -292,7 +343,9 @@ object ProviderCatalog {
                 "openai/gpt-4.1-mini",
                 "deepseek/DeepSeek-V3-0324",
                 "meta/Llama-3.3-70B-Instruct"
-            )
+            ),
+            tokenLimit = "200K",
+            supportsTools = true
         ),
     )
 
@@ -306,16 +359,22 @@ object ProviderCatalog {
             "https://api.openai.com/v1", "gpt-4o-mini", true,
             keyUrl = "https://platform.openai.com/api-keys",
             description = "Ücretli · referans kalite",
-            availableModels = listOf("gpt-4o-mini", "gpt-4o", "gpt-4.1-mini")),
+            availableModels = listOf("gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"),
+            tokenLimit = "16K",
+            supportsTools = true),
         ProviderTemplate("openai_compat", "Grok (xAI)",
             "https://api.x.ai/v1", "grok-3-mini", true,
             keyUrl = "https://console.x.ai/",
             description = "Ücretli",
-            availableModels = listOf("grok-3-mini", "grok-3", "grok-4")),
+            availableModels = listOf("grok-3-mini", "grok-3", "grok-4"),
+            tokenLimit = "128K",
+            supportsTools = true),
         ProviderTemplate("openai_compat", "Özel uç",
             "https://", "model-id", false,
             description = "Kendi sunucun (Ollama, vLLM, LM Studio…)",
-            availableModels = emptyList()),
+            availableModels = emptyList(),
+            tokenLimit = "?K",
+            supportsTools = true),
     )
 
     fun byType(type: String): ProviderTemplate? =

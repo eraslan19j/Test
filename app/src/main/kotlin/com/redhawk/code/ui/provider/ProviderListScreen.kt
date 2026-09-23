@@ -147,13 +147,15 @@ private fun ProviderRow(
                 }
             }
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(p.displayName, fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                Text("${p.type} · ${p.model}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            }
+                    Column(Modifier.weight(1f)) {
+                         Text(p.displayName, fontWeight = FontWeight.SemiBold,
+                             style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                         val tpl = com.redhawk.code.data.provider.ProviderCatalog.byBaseUrl(p.baseUrl)
+                         val limit = tpl?.tokenLimit
+                         Text("${p.type} · ${p.model}${if (!limit.isNullOrBlank()) " · 🔺 $limit" else ""}",
+                             style = MaterialTheme.typography.labelSmall,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                     }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Outlined.Edit, "Düzenle",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

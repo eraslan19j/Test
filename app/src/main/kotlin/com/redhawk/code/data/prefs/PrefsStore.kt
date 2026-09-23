@@ -60,6 +60,7 @@ class PrefsStore(private val context: Context) {
         val TOTAL_CHATS             = intPreferencesKey("total_chats")
         val LONGEST_CHAT            = intPreferencesKey("longest_chat")
         val LAST_ACTIVITY           = stringPreferencesKey("last_activity")
+        val USER_NAME               = stringPreferencesKey("user_name")
 
         // Hızlı mod / prompt öner
         val FAST_MODE               = booleanPreferencesKey("fast_mode")
@@ -178,6 +179,9 @@ class PrefsStore(private val context: Context) {
 
     val lastActivity: Flow<String> = context.redhawkDataStore.data.map { it[Keys.LAST_ACTIVITY] ?: "" }
     suspend fun setLastActivity(s: String) = context.redhawkDataStore.edit { it[Keys.LAST_ACTIVITY] = s }
+
+    val userName: Flow<String> = context.redhawkDataStore.data.map { it[Keys.USER_NAME] ?: "ReDHawK Kullanıcı" }
+    suspend fun setUserName(s: String) = context.redhawkDataStore.edit { it[Keys.USER_NAME] = s }
 
     // ---- Hızlı mod / diğer
     val fastMode: Flow<Boolean> = context.redhawkDataStore.data.map { it[Keys.FAST_MODE] ?: false }

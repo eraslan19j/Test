@@ -240,6 +240,13 @@ private fun PresetCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
 
+            if (p.tokenLimit.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text("🔺 ${p.tokenLimit} token · ${if (p.supportsTools) "tool destekli" else "metin-only"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(

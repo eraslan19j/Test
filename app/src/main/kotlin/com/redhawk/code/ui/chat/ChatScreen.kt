@@ -84,12 +84,18 @@ fun ChatScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(state.chatTitle.ifEmpty { "ReDHawK AI" },
-                            style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                        Text(state.modelLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                         Text(state.chatTitle.ifEmpty { "ReDHawK AI" },
+                             style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                         Text(state.modelLabel,
+                             style = MaterialTheme.typography.labelSmall,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                         if (state.tokenLimit.isNotBlank()) {
+                             Text("🔺 ${state.tokenLimit} token penceresi",
+                                 style = MaterialTheme.typography.labelSmall,
+                                 color = MaterialTheme.colorScheme.primary,
+                                 modifier = Modifier.padding(top = 2.dp))
+                         }
+                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onOpenDrawer) { Icon(Icons.Filled.Menu, null) }

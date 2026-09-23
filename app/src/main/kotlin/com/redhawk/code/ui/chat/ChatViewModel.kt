@@ -14,6 +14,7 @@ import com.redhawk.code.agent.ProjectFiles
 import com.redhawk.code.data.db.MessageEntity
 import com.redhawk.code.data.db.ProviderEntity
 import com.redhawk.code.data.prefs.PrefsStore
+import com.redhawk.code.data.provider.ProviderCatalog
 import com.redhawk.code.data.repo.ChatRepository
 import com.redhawk.code.data.repo.ProviderRepository
 import com.redhawk.code.data.skills.SkillCatalog
@@ -48,6 +49,7 @@ data class ChatUiState(
     val modelLabel: String = "sağlayıcı seç",
     val modelReady: Boolean = false,
     val currentProvider: ProviderEntity? = null,
+    val tokenLimit: String = "",
     val enabledSkills: Set<String> = emptySet(),
     val agentMode: Boolean = false,
     val pendingApproval: ToolApproval? = null,
@@ -126,10 +128,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     fun switchProvider(p: ProviderEntity) {
         provider = ProviderFactory.create(p)
+        val tpl = ProviderCatalog.byBaseUrl(p.baseUrl)
         _state.update {
             it.copy(
                 currentProvider = p,
                 modelLabel = "${p.displayName} · ${p.model}",
+                tokenLimit = tpl?.tokenLimit ?: "",
                 modelReady = true,
                 error = null
             )
@@ -144,10 +148,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             providerRepo.updateModel(cur.id, newModel)
             val updated = providerRepo.get(cur.id) ?: return@launch
             provider = ProviderFactory.create(updated)
+            val tpl = ProviderCatalog.byBaseUrl(updated.baseUrl)
             _state.update {
                 it.copy(
                     currentProvider = updated,
-                    modelLabel = "${updated.displayName} · ${updated.model}"
+                    modelLabel = "${updated.displayName} · ${updated.model}",
+                    tokenLimit = tpl?.tokenLimit ?: ""
                 )
             }
         }

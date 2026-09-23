@@ -198,7 +198,7 @@ private fun MainNav(activity: ComponentActivity) {
                     onOpenAgent = { chatVm.ensureActiveChat(); nav.push("chat") },
                     onOpenModels = { nav.push("providers") },
                     onOpenSettings = { nav.push("settings") },
-                    onOpenNativeTest = { },
+                    onOpenNativeTest = { nav.push("permissions") },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
                 )
 
@@ -220,7 +220,7 @@ private fun MainNav(activity: ComponentActivity) {
                     onOpenModels = { nav.push("providers") },
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenChats = { nav.push("chatlist") },
-                    onOpenProject = { },
+                    onOpenProject = { nav.push("files") },
                     onOpenPermissions = { nav.push("permissions") }
                 )
 
@@ -231,7 +231,7 @@ private fun MainNav(activity: ComponentActivity) {
                     onOpenPersonalization = { nav.push("settings_personalization") },
                     onOpenNotifications = { nav.push("settings_notifications") },
                     onOpenAccount = { nav.push("settings_account") },
-                    onOpenLicenses = { }
+                    onOpenLicenses = { nav.push("licenses") }
                 )
                 "settings_appearance" -> AppearanceScreen(prefs) { nav.pop() }
                 "settings_personalization" -> PersonalizationScreen(prefs) { nav.pop() }
@@ -248,6 +248,32 @@ private fun MainNav(activity: ComponentActivity) {
                     vm = chatVm,
                     onBack = { nav.pop() }
                 )
+
+                "licenses" -> Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Lisanslar") },
+                            navigationIcon = {
+                                IconButton(onClick = { nav.pop() }) {
+                                    Icon(Icons.Filled.ArrowBack, null)
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                            )
+                        )
+                    }
+                ) { pad ->
+                    Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "Apache 2.0 lisanslı açık kaynak kütphaneler.\n" +
+                            "GitHub repo: github.com/eraslan19j/Test",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
 
                 else -> Scaffold(
                     topBar = {
