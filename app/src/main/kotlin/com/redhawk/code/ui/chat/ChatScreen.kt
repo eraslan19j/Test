@@ -136,6 +136,20 @@ fun ChatScreen(
             Modifier.padding(pad).fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            Divider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.Transparent,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
             if (state.messages.isEmpty()) {
                 Box(Modifier.weight(1f)) { EmptyChatState({ vm.setInput(it) }) }
             } else {
