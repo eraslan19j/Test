@@ -263,7 +263,7 @@ object ProviderCatalog {
             keyUrl = "https://openrouter.ai/keys",
             isFree = true,
             freeHint = "openrouter.ai → Keys → :free modeller",
-            description = "Yüzlerce model · ücretsiz seçenekler",
+            description = "24 ücretsiz model · en yeni free modeller",
             availableModels = listOf(
                 "deepseek/deepseek-r1:free",
                 "meta-llama/llama-3.3-70b-instruct:free",
@@ -271,12 +271,26 @@ object ProviderCatalog {
                 "google/gemini-2.0-flash-exp:free",
                 "mistralai/mistral-small-3.1-24b-instruct:free",
                 "poolside/laguna-s-2.1:free",
+                "poolside/laguna-xs-2.1:free",
                 "nvidia/nemotron-3-ultra-550b-a55b:free",
+                "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+                "nvidia/nemotron-3-super-120b-a12b:free",
+                "nvidia/nemotron-3.5-content-safety:free",
+                "nvidia/nemotron-3.5-lightning:free",
                 "dots-studio/dots-3-note-preview:free",
                 "nex-agi/nex-n2.5-pro:free",
-                "inclusionai/ling-3.0-flash-vl:free"
+                "nex-agi/nex-n2.5-mini:free",
+                "inclusionai/ling-3.0-flash-vl:free",
+                "inclusionai/ling-3.0-flash-fin:free",
+                "inclusionai/ling-3.0-flash-sante:free",
+                "z-ai/glm-5.2:free",
+                "thinkingmachines/inkling-small:free",
+                "liquid/lfm-2.5-2.6b:free",
+                "cohere/north-mini-code:free",
+                "qwen/qwen3.8-27b:free",
+                "stepfun/step-3.7-flash:free"
             ),
-            tokenLimit = "16K",
+            tokenLimit = "200K",
             supportsTools = true
         ),
         ProviderTemplate(
