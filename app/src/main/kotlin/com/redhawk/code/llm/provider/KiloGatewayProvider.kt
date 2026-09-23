@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -119,7 +119,7 @@ class KiloGatewayProvider(
                         val emsg = when (e) {
                             is JsonObject -> e["message"]?.jsonPrimitive?.contentOrNull
                                 ?: e.toString().take(200)
-                            is kotlinx.serialization.json.JsonPrimitive -> e.contentOrNull ?: e.toString()
+                            is JsonPrimitive -> e.contentOrNull ?: e.toString()
                             else -> e.toString().take(200)
                         }.ifBlank { "API hatası" }
                         val low = emsg.lowercase()
