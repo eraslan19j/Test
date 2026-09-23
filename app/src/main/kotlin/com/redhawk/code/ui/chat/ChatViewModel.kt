@@ -608,16 +608,31 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         p.chat(convo, tools, modelId, temp, maxTok).collect { ev ->
                             if (stopRequested) return@collect
                             when (ev) {
-                                is LlmEvent.TextDelta -> {
-                                    streamingRaw.append(ev.text)
-                                    uiTick.trySend(Unit)
-                                }
-                                is LlmEvent.Error -> {
-                                    _state.update { it.copy(error = ev.message) }
-                                    if (ev.quotaExceeded) quotaFailed = true
-                                }
-                                else -> {}
-                            }
+                                 is LlmEvent.TextDelta -> {
+                                     streamingRaw.append(ev.text)
+                                     uiTick.trySend(Unit)
+                                 }
+                                 is LlmEvent.ToolCallRequested -> pendingTool = ev.call
+                                 is LlmEvent.Usage -> {
+                                     val ctxWindow = _state.value.contextWindow
+                                     val total = ev.inputTokens + ev.outputTokens
+                                     val remaining = if (ctxWindow > 0) ctxWindow - total else 0
+                                     _state.update {
+                                         it.copy(
+                                             inputTokens = ev.inputTokens,
+                                             outputTokens = ev.outputTokens,
+                                             totalTokens = total,
+                                             contextUsed = total,
+                                             contextRemaining = remaining
+                                         )
+                                     }
+                                 }
+                                 is LlmEvent.Error -> {
+                                     _state.update { it.copy(error = ev.message) }
+                                     if (ev.quotaExceeded) quotaFailed = true
+                                 }
+                                 LlmEvent.Done -> {}
+                             }
                         }
                     }
                 } catch (e: CancellationException) {
