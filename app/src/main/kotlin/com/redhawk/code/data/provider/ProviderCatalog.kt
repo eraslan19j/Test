@@ -15,6 +15,15 @@ data class ProviderTemplate(
     val supportsTools: Boolean = true
 )
 
+data class ModelInfo(
+    val id: String,
+    val contextWindow: Int,      // token cinsinden context penceresi
+    val maxOutput: Int = 8192,    // maksimum output token
+    val reasoning: Boolean = false,
+    val toolSupport: Boolean = true,
+    val vision: Boolean = false
+)
+
 object ProviderCatalog {
 
     val presets = listOf(
@@ -262,14 +271,30 @@ object ProviderCatalog {
             requiresKey = true,
             keyUrl = "https://openrouter.ai/keys",
             isFree = true,
-            freeHint = "openrouter.ai → Keys → :free modeller",
-            description = "24 ücretsiz model · en yeni free modeller",
+            freeHint = "ANAHTAR GEREKTİR → openrouter.ai/keys · Kilo Gateway ile anahtarsız alternatif var",
+            description = "Kilitli · :free modeller için API key zorunlu",
             availableModels = listOf(
                 "deepseek/deepseek-r1:free",
                 "meta-llama/llama-3.3-70b-instruct:free",
                 "qwen/qwen-2.5-72b-instruct:free",
                 "google/gemini-2.0-flash-exp:free",
-                "mistralai/mistral-small-3.1-24b-instruct:free",
+                "mistralai/mistral-small-3.1-24b-instruct:free"
+            ),
+            tokenLimit = "200K",
+            supportsTools = true
+        ),
+        ProviderTemplate(
+            type = "kilogateway",
+            displayName = "Kilo Gateway",
+            defaultBaseUrl = "https://api.kilo.ai/api/gateway",
+            defaultModel = "kilo-auto/free",
+            requiresKey = false,
+            keyUrl = "",
+            isFree = true,
+            freeHint = "ANAHTARSIZ — tüm 24 :free model ücretsiz",
+            description = "ANAHTARSIZ · OpenRouter free modellerinin kapısı",
+            availableModels = listOf(
+                "kilo-auto/free",
                 "poolside/laguna-s-2.1:free",
                 "poolside/laguna-xs-2.1:free",
                 "nvidia/nemotron-3-ultra-550b-a55b:free",
@@ -288,24 +313,15 @@ object ProviderCatalog {
                 "liquid/lfm-2.5-2.6b:free",
                 "cohere/north-mini-code:free",
                 "qwen/qwen3.8-27b:free",
-                "stepfun/step-3.7-flash:free"
+                "stepfun/step-3.7-flash:free",
+                "deepseek/deepseek-r1:free",
+                "meta-llama/llama-3.3-70b-instruct:free",
+                "qwen/qwen-2.5-72b-instruct:free",
+                "google/gemini-2.0-flash-exp:free",
+                "mistralai/mistral-small-3.1-24b-instruct:free"
             ),
             tokenLimit = "200K",
             supportsTools = true
-        ),
-        ProviderTemplate(
-            type = "openai_compat",
-            displayName = "Kilo Auto",
-            defaultBaseUrl = "https://api-inference.huggingface.co/v1",
-            defaultModel = "kilo-auto/free",
-            requiresKey = false,
-            keyUrl = "https://huggingface.co/settings/tokens",
-            isFree = true,
-            freeHint = "HF token ile ücretsiz (dakikada 30K token)",
-            description = "ANAHTARSIZ · Kilo otomatik yönlendirme (multimodal)",
-            availableModels = listOf("kilo-auto/free"),
-            tokenLimit = "16K",
-            supportsTools = false
         ),
         ProviderTemplate(
             type = "openai_compat",
@@ -412,4 +428,39 @@ object ProviderCatalog {
         val list = tpl?.availableModels ?: emptyList()
         return if (currentModel in list) list else listOf(currentModel) + list
     }
+
+    /**
+     * Model metadata: context window, max output, reasoning, tool support, vision.
+     * Kilo Gateway üzerinden :free modeller için doğru değerler.
+     */
+    val modelInfo: Map<String, ModelInfo> = mapOf(
+        "kilo-auto/free" to ModelInfo("kilo-auto/free", 16000, 4096, reasoning = true, toolSupport = true, vision = true),
+        "poolside/laguna-s-2.1:free" to ModelInfo("poolside/laguna-s-2.1:free", 131072, 8192, reasoning = true, toolSupport = true),
+        "poolside/laguna-xs-2.1:free" to ModelInfo("poolside/laguna-xs-2.1:free", 8192, 4096, toolSupport = true),
+        "nvidia/nemotron-3-ultra-550b-a55b:free" to ModelInfo("nvidia/nemotron-3-ultra-550b-a55b:free", 131072, 16384, reasoning = true, toolSupport = true, vision = true),
+        "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free" to ModelInfo("nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", 131072, 8192, reasoning = true, toolSupport = true),
+        "nvidia/nemotron-3-super-120b-a12b:free" to ModelInfo("nvidia/nemotron-3-super-120b-a12b:free", 200000, 16384, reasoning = true, toolSupport = true, vision = true),
+        "nvidia/nemotron-3.5-content-safety:free" to ModelInfo("nvidia/nemotron-3.5-content-safety:free", 128000, 2048, reasoning = false, toolSupport = false),
+        "nvidia/nemotron-3.5-lightning:free" to ModelInfo("nvidia/nemotron-3.5-lightning:free", 131072, 16384, toolSupport = true),
+        "dots-studio/dots-3-note-preview:free" to ModelInfo("dots-studio/dots-3-note-preview:free", 131072, 8192, reasoning = true, toolSupport = true),
+        "nex-agi/nex-n2.5-pro:free" to ModelInfo("nex-agi/nex-n2.5-pro:free", 200000, 8192, reasoning = true, toolSupport = true),
+        "nex-agi/nex-n2.5-mini:free" to ModelInfo("nex-n2.5-mini:free", 131072, 4096, toolSupport = true),
+        "inclusionai/ling-3.0-flash-vl:free" to ModelInfo("inclusionai/ling-3.0-flash-vl:free", 128000, 8192, toolSupport = true, vision = true),
+        "inclusionai/ling-3.0-flash-fin:free" to ModelInfo("inclusionai/ling-3.0-flash-fin:free", 128000, 8192, toolSupport = true),
+        "inclusionai/ling-3.0-flash-sante:free" to ModelInfo("inclusionai/ling-3.0-flash-sante:free", 128000, 8192, toolSupport = true),
+        "z-ai/glm-5.2:free" to ModelInfo("z-ai/glm-5.2:free", 128000, 8192, reasoning = true, toolSupport = true),
+        "thinkingmachines/inkling-small:free" to ModelInfo("thinkingmachines/inkling-small:free", 32000, 4096, toolSupport = true),
+        "liquid/lfm-2.5-2.6b:free" to ModelInfo("liquid/lfm-2.5-2.6b:free", 4000, 2048, reasoning = true, toolSupport = true),
+        "cohere/north-mini-code:free" to ModelInfo("cohere/north-mini-code:free", 128000, 4096, toolSupport = true),
+        "qwen/qwen3.8-27b:free" to ModelInfo("qwen/qwen3.8-27b:free", 131072, 8192, reasoning = true, toolSupport = true),
+        "stepfun/step-3.7-flash:free" to ModelInfo("stepfun/step-3.7-flash:free", 128000, 8192, toolSupport = true, vision = true),
+        "deepseek/deepseek-r1:free" to ModelInfo("deepseek/deepseek-r1:free", 128000, 8192, reasoning = true, toolSupport = true),
+        "meta-llama/llama-3.3-70b-instruct:free" to ModelInfo("meta-llama/llama-3.3-70b-instruct:free", 70000, 8192, toolSupport = true),
+        "qwen/qwen-2.5-72b-instruct:free" to ModelInfo("qwen/qwen-2.5-72b-instruct:free", 32000, 8192, toolSupport = true),
+        "google/gemini-2.0-flash-exp:free" to ModelInfo("google/gemini-2.0-flash-exp:free", 1000000, 8192, toolSupport = true, vision = true),
+        "mistralai/mistral-small-3.1-24b-instruct:free" to ModelInfo("mistralai/mistral-small-3.1-24b-instruct:free", 128000, 8192, toolSupport = true)
+    )
+
+    fun infoFor(modelId: String): ModelInfo? =
+        modelInfo[modelId]
 }

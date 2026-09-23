@@ -12,5 +12,8 @@ data class UiMessage(
     val thinkingStreaming: Boolean = false,
     val inThinking: Boolean = false,
     val toolLabel: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val inputTokens: Int = 0,
+    val outputTokens: Int = 0,
+    val totalTokens: Int = 0
 )

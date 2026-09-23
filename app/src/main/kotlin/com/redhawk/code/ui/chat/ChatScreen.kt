@@ -91,12 +91,23 @@ fun ChatScreen(
                          Text(state.modelLabel,
                              style = MaterialTheme.typography.labelSmall,
                              color = MaterialTheme.colorScheme.onSurfaceVariant)
-                         if (state.tokenLimit.isNotBlank()) {
-                             Text("🔺 ${state.tokenLimit} token penceresi",
-                                 style = MaterialTheme.typography.labelSmall,
-                                 color = MaterialTheme.colorScheme.primary,
-                                 modifier = Modifier.padding(top = 2.dp))
-                         }
+                          if (state.tokenLimit.isNotBlank()) {
+                              Text("🔺 ${state.tokenLimit} token penceresi",
+                                  style = MaterialTheme.typography.labelSmall,
+                                  color = MaterialTheme.colorScheme.primary,
+                                  modifier = Modifier.padding(top = 2.dp))
+                          }
+                          if (state.totalTokens > 0) {
+                              Text(
+                                  "🔸 ${state.inputTokens}/${state.outputTokens} token " +
+                                      "(${state.totalTokens} toplam) " +
+                                      "· ${state.contextWindowStr} context " +
+                                      "· ${state.contextRemaining} kalan",
+                                  style = MaterialTheme.typography.labelSmall,
+                                  color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                  modifier = Modifier.padding(top = 2.dp)
+                              )
+                          }
                      }
                 },
                 navigationIcon = {
