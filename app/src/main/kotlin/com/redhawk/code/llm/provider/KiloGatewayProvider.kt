@@ -139,9 +139,7 @@ class KiloGatewayProvider(
                         }
                     }
 
-                    obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
-                    val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
-                    val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
+                    val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null                    val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
                     val delta = choice["delta"]?.jsonObject
 
                     val tc = delta?.get("tool_calls")?.jsonArray?.firstOrNull()?.jsonObject
