@@ -117,20 +117,6 @@ fun ChatScreen(
                     containerColor = MaterialTheme.colorScheme.background)
             )
         },
-        Divider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            Color.Transparent,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
     ) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize()
