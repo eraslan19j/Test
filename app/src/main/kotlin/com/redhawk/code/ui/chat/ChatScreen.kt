@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -111,10 +113,24 @@ fun ChatScreen(
                     IconButton(onClick = { vm.newChat() }) { Icon(Icons.Filled.Add, "Yeni") }
                     IconButton(onClick = vm::clearChat) { Icon(Icons.Outlined.DeleteSweep, "Temizle") }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background)
             )
-        }
+        },
+        Divider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            Color.Transparent,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
     ) { pad ->
         Column(
             Modifier.padding(pad).fillMaxSize()
@@ -195,9 +211,15 @@ fun ChatScreen(
                 }
             }
 
-            Row(
-                Modifier.fillMaxWidth().padding(8.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.ime),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            ) {
+            Row(
+                Modifier.fillMaxWidth().padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 FilledTonalIconButton(onClick = { showQuickActions = true }) {
@@ -237,9 +259,10 @@ fun ChatScreen(
                             vm.send()
                         }) {
                             Icon(Icons.Filled.Send, "Gönder")
-                        }
                     }
                 }
+            }
+        }
             }
         }
     }
