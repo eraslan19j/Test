@@ -608,6 +608,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "<tool name=\"web_search\">{\"query\": \"konu\"}</tool> " +
             "<tool name=\"write_file\">{\"path\": \"a.txt\", \"content\": \"...\"}</tool> " +
             "Araç bloğu dışında araç adı yazma; sonucu bekle, sonra Türkçe özetle. " +
+            "Kullanıcı klasör veya dosya sorarsa SORU SORMA: önce list_files ile " +
+            "köke bak, sonucu görmeden 'yapabilirim' deme. " +
             "Kullanıcı kod/proje işi isterse önce list_files ile klasöre bak, " +
             "gerekirse read_file ile oku, sonucu write_file ile yaz. " +
             "Güncel bilgi, kütüphane dokümantasyonu veya hata çözümü gerekiyorsa " +
