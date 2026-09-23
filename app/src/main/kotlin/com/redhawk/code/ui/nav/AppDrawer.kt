@@ -49,6 +49,9 @@ fun AppDrawer(
             DrawerEntry.Link("Yeni Sağlayıcı", Icons.Outlined.Add, "provider_setup"),
             DrawerEntry.Link("Yanıt Dili", Icons.Outlined.Translate, "settings"),
         ),
+        "ÇALIŞMA ALANI" to listOf(
+            DrawerEntry.Link("Dosyalar", Icons.Outlined.Folder, "files"),
+        ),
         "SİSTEM" to listOf(
             DrawerEntry.Link("Ayarlar", Icons.Outlined.Settings, "settings"),
             DrawerEntry.Action(

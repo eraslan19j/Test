@@ -53,13 +53,14 @@ fun ChatScreen(
     // Sesli okuma motoru (TTS) — ekran kapanınca serbest bırakılır
     var tts by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
     DisposableEffect(ctx) {
-        val engine = android.speech.tts.TextToSpeech(ctx) { status ->
+        var engine: android.speech.tts.TextToSpeech? = null
+        engine = android.speech.tts.TextToSpeech(ctx) { status ->
             if (status == android.speech.tts.TextToSpeech.SUCCESS) {
-                engine.language = java.util.Locale("tr", "TR")
+                engine?.language = java.util.Locale("tr", "TR")
             }
         }
         tts = engine
-        onDispose { engine.stop(); engine.shutdown() }
+        onDispose { engine?.stop(); engine?.shutdown() }
     }
 
     // Proje klasörü seçici (SAF): kalıcı okuma/yazma izni alınır
@@ -124,7 +125,7 @@ fun ChatScreen(
                 ) {
                     itemsIndexed(state.messages, key = { _, m -> m.id }) { _, m ->
                         // PERF: her satırda giriş animasyonu yok (uzun sohbette kasma yapıyordu)
-                        MessageItem(m, ctx)
+                        MessageItem(m, ctx, tts)
                     }
                 }
             }
@@ -292,7 +293,11 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageItem(m: UiMessage, ctx: Context) {
+private fun MessageItem(
+    m: UiMessage,
+    ctx: Context,
+    tts: android.speech.tts.TextToSpeech?
+) {
     if (m.isUser) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
             val userShape = RoundedCornerShape(

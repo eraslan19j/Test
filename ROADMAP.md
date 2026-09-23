@@ -5,8 +5,9 @@ Hedef: mobilde Codex seviyesinde, ücretsiz modellerle çalışan en güçlü ya
 ## Mimari (özet)
 
 ```
-ui/            → Compose ekranları (chat, provider, settings, onboarding)
+ui/            → Compose ekranları (chat, files, provider, settings, onboarding)
 ui/chat/       → ChatViewModel = sohbet + ajan orkestrasyonu + otomatik sağlayıcı geçişi
+ui/files/      → Dosya gezgini + metin editörü (ajan deposu / proje klasörü)
 agent/         → AgentTools (dosya+internet) + ProjectFiles (SAF + app deposu) + WebTools
 llm/           → LlmProvider arayüzü + OpenAI-uyumlu istemci + DuckAiProvider (anahtarsız)
 data/db        → Room (chats, messages, providers)
@@ -21,40 +22,33 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 
 ## Yapıldı
 
-### v0.2 – v0.9 (özet)
+### v0.2 – v0.10 (özet)
 - [x] Ajan Faz 1+2, kartal ikon, animasyonlu ana ekran
 - [x] 19 sağlayıcı kartı (~75 model), otomatik kota geçişi
 - [x] Sessiz "…" ölü, dil seçeneği, dosya-kartı düşünme paneli
-- [x] Titreşimler, parlama çerçevesi (v0.10'da balonla gitti)
+- [x] Saf Türkçe (3 sızıntı türü kapalı), balonsuz AI, TTS, zengin menü
+- [x] Gerçek açık/koyu/sistem teması, selamlamalı ana ekran
 
-### v0.10 — Saf Türkçe + Balonsuz AI + Zengin Menü + Gerçek Tema
-- [x] KRİTİK: etiketsiz İngilizce giriş temizliği (stripPreamble) —
-      "The user asks..." tarzı cümleler baştan atılır, SADECE arkada
-      Türkçe varsa. Tam-İngilizce cevaplara dokunulmaz.
-- [x] Dil direktifi sertleşti: giriş cümlesi yasağı eklendi
-- [x] AI yanıtları balonsuz + tam genişlik (referans tarzı)
-- [x] Sesli okuma (TTS): yanıt başına 🔊 butonu, Türkçe ses
-- [x] Sol menü zenginleşti: Yeni Sohbet, Yanıt Dili, Tema: Koyu/Açık
-      (hepsi çalışıyor — ölü buton yok)
-- [x] GERÇEK açık tema: RedHawkTheme prefs'i okur (koyu/açık/sistem)
-- [x] Ana ekran kahramanı: saate göre selamlama
-      (Günaydın/İyi günler/İyi akşamlar/İyi geceler)
+### v0.11 — Build Fix (TTS) + Dosya Gezgini + Editör
+- [x] Build fix: TTS motoru MessageItem'a parametreyle taşındı +
+      kendi-kendini referans eden init düzeltildi
+- [x] Dosyalar ekranı: klasör gezme, metin düzenleme, kaydetme,
+      yeni dosya, onaylı silme (SAF + uygulama deposu)
+- [x] ProjectFiles.delete eklendi (yerel + SAF)
+- [x] Menüde "ÇALIŞMA ALANI → Dosyalar" satırı + "files" rotası
+- [x] Liste/editör arası kayar-solma geçiş animasyonu
 
 ## Bilinen doğrular (ekran görüntülerinden)
 
-- Küçük modeller 3 şekilde düşünme sızdırır, 3'ü de kapalı:
-  (1) <think> etiketli → panele, (2) kapanış-tek → panele,
-  (3) etiketsiz İngilizce giriş → çöpe (Türkçe varsa).
+- Küçük modeller 3 şekilde düşünme sızdırır, 3'ü de kapalı.
 - Paneldeki düşünmenin İngilizce kalması NORMALDİR (referansta da öyle).
 - Pollinations anahtarsız öldü. Bedava: LLM7, OVH, Duck.ai, Dahl,
   NaraRouter, KiraAI-mini, Atria.
 
 ## Sıradaki (referans uygulamadan — önerilen sıra)
 
-### v0.11 — Dosya Gezgini + Editör (referans: Dosyalar, Editör)
-- [ ] Ajan deposunu uygulamada gör/düzenle (gezgin + metin editörü)
-- [ ] write_file için diff önizleme + `delete_file` aracı (onaylı)
-- [ ] Menüye "Dosyalar" satırı (o zaman gerçek olur)
+### v0.12 — Ajan Dosya Araçları v2
+- [ ] `delete_file` ajan aracı (onaylı) + write_file diff önizleme
 
 ### v1.0 — Terminal + Proje + Kurallar
 - [ ] Kısıtlı komut çalıştırma (onaylı), proje kökü, redhawk.json
@@ -66,11 +60,9 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 
 ## Test listesi (AndroidIDE build sonrası)
 
-1. Build başarılı
-2. KiraAI kira-mini-1.0 → "hava durumu nasıl İSTANBUL" →
-   balonda SADECE Türkçe (The user asks... YOK)
-3. AI yanıtı balonsuz, tam genişlik; kullanıcı balonu kırmızı
-4. 🔊 → yanıtı Türkçe sesli okuyor mu
-5. Menü: Yeni Sohbet + Yanıt Dili + Tema satırları çalışıyor mu
-6. Tema: Koyu → açık tema gerçekten açılıyor mu
-7. Ana ekranda saate uygun selamlama
+1. Build başarılı (TTS fix)
+2. 🔊 → yanıtı Türkçe sesli okuyor mu
+3. Menü → Dosyalar → ajan deposu listeleniyor mu
+4. Ajan modunda "merhaba.txt oluştur" → Dosyalar'da görünüyor mu
+5. Dosya aç → düzenle → kaydet → "GÜNCELLENDİ" bildirimi
+6. Yeni dosya + silme onayı çalışıyor mu

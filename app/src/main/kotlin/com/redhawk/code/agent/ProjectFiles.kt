@@ -165,6 +165,31 @@ object ProjectFiles {
         }
     }
 
+    fun delete(ctx: Context, projectUri: String?, path: String): String {
+        val segs = safeSegments(path)
+        if (segs.isNullOrEmpty()) return "HATA: geçersiz yol."
+        return when (val root = resolveRoot(ctx, projectUri)) {
+            is Root.Local -> {
+                var f = root.dir
+                for (s in segs) f = File(f, s)
+                if (!f.exists()) return "HATA: '$path' bulunamadı."
+                val ok = runCatching { if (f.isDirectory) f.deleteRecursively() else f.delete() }
+                    .getOrDefault(false)
+                if (ok) "SİLİNDİ: $path" else "HATA: silinemedi."
+            }
+            is Root.Saf -> {
+                var dir = DocumentFile.fromTreeUri(ctx, root.treeUri)
+                    ?: return "HATA: proje klasörüne erişilemiyor (izin kalkmış olabilir)."
+                for (s in segs.dropLast(1)) {
+                    dir = dir.findFile(s) ?: return "HATA: '$path' bulunamadı."
+                }
+                val target = dir.findFile(segs.last()) ?: return "HATA: '$path' bulunamadı."
+                if (runCatching { target.delete() }.getOrDefault(false)) "SİLİNDİ: $path"
+                else "HATA: silinemedi."
+            }
+        }
+    }
+
     private fun truncate(text: String): String =
         if (text.length > MAX_READ_CHARS) text.take(MAX_READ_CHARS) + "\n…(kesildi, dosyanın devamı var)"
         else text

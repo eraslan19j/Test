@@ -238,6 +238,12 @@ private fun MainNav(activity: ComponentActivity) {
                 "settings_notifications" -> NotificationsScreen(prefs) { nav.pop() }
                 "settings_account" -> AccountScreen(prefs) { nav.pop() }
 
+                "files" -> com.redhawk.code.ui.files.FilesScreen(
+                    vm = chatVm,
+                    onBack = { nav.pop() },
+                    onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+
                 else -> Scaffold(
                     topBar = {
                         TopAppBar(

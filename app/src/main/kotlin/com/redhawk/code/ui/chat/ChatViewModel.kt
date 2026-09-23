@@ -225,6 +225,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(projectLabel = ProjectFiles.displayName(app, uri.toString())) }
     }
 
+    /** Dosya ekranı için aktif sohbetin proje yolu (null = uygulama deposu) */
+    suspend fun activeProjectUri(): String? {
+        val id = _state.value.chatId ?: return null
+        return runCatching { repo.getChat(id)?.projectUri }.getOrNull()
+    }
+
     private suspend fun runAgentTool(chatId: String, tc: ToolCall): String {
         val app = getApplication<Application>()
         val projectUri = runCatching { repo.getChat(chatId)?.projectUri }.getOrNull()
