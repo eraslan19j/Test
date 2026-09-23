@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.redhawk.code.agent.AgentTools
+import com.redhawk.code.agent.ToolIntentParser
 import com.redhawk.code.agent.ProjectFiles
 import com.redhawk.code.data.db.MessageEntity
 import com.redhawk.code.data.db.ProviderEntity
@@ -67,6 +68,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private var persistJob: Job? = null
     private var stopRequested = false
     private var approvalGate: CompletableDeferred<Boolean>? = null
+    // Yanıt dili Türkçe ise İngilizce cümleler balondan panele taşınır (garanti)
+    private var turkishOnly = true
 
     // Streaming tamponu: ham metin birikir, her UI güncellemesinde tamamı parse edilir.
     // (Parça-parça tag avı yerine full-reparse: bölünmüş tag bug'larını öldürür.)
@@ -350,6 +353,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     val sysPromptBase = prefs.systemPrompt.first()
                     val sysPrompt = buildSystemPrompt(sysPromptBase, agentOn)
                     // Ayarlardan: sıcaklık + maksimum token (gerçekten uygulanır)
+                    turkishOnly = runCatching { prefs.responseLang.first() }
+                        .getOrDefault("tr") == "tr"
                     val temp = prefs.temperature.first()
                     val maxTok = prefs.maxTokens.first()
 
@@ -387,6 +392,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     var rounds = 0
                     var aborted = false
                     var pendingTool: ToolCall? = null
+                    var hadCalls = false
                     do {
                         pendingTool = null
                         val roundStart = streamingRaw.length
@@ -406,20 +412,39 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                                 LlmEvent.Done -> {}
                             }
                         }
-                        val tc = pendingTool
-                        if (tc != null && !aborted && !stopRequested && rounds < MAX_AGENT_ROUNDS) {
+                        // Metin-içi araç niyeti: function-calling bilmeyen küçük
+                        // modeller <tool> / name({...}) yazar — onu da çalıştır.
+                        val roundText = streamingRaw.substring(roundStart)
+                        val textIntents = if (agentOn && pendingTool == null &&
+                            !aborted && !stopRequested
+                        ) ToolIntentParser.extract(roundText) else emptyList()
+                        val calls: List<ToolCall> = pendingTool?.let { listOf(it) }
+                            ?: textIntents.mapIndexed { i, t ->
+                                ToolCall("txt_${now}_${rounds}_$i", t.name, t.argsJson)
+                            }
+                        hadCalls = false
+                        if (calls.isNotEmpty() && !aborted && !stopRequested &&
+                            rounds < MAX_AGENT_ROUNDS
+                        ) {
+                            hadCalls = true
                             rounds++
-                            val roundText = streamingRaw.substring(roundStart)
-                            val roundResp = ThinkingParser.parseStreaming(roundText).response
-                            convo.add(ChatMessage(Role.ASSISTANT, content = roundResp, toolCalls = listOf(tc)))
-                            updateToolLabel("⚙ ${tc.name} çalışıyor…")
-                            val result = runAgentTool(chatId, tc)
-                            updateToolLabel(null)
-                            val clipped = if (result.length > 8000) result.take(8000) + "\n…(kesildi)"
-                            else result
-                            convo.add(ChatMessage(Role.TOOL, content = clipped, toolCallId = tc.id, toolName = tc.name))
+                            val roundResp = ToolIntentParser.stripToolBlocks(
+                                ThinkingParser.parseStreaming(roundText).response)
+                            convo.add(ChatMessage(
+                                Role.ASSISTANT, content = roundResp, toolCalls = calls))
+                            for (tc in calls) {
+                                if (stopRequested) break
+                                updateToolLabel("⚙ ${tc.name} çalışıyor…")
+                                val result = runAgentTool(chatId, tc)
+                                updateToolLabel(null)
+                                val clipped = if (result.length > 8000)
+                                    result.take(8000) + "\n…(kesildi)"
+                                else result
+                                convo.add(ChatMessage(Role.TOOL, content = clipped,
+                                    toolCallId = tc.id, toolName = tc.name))
+                            }
                         }
-                    } while (pendingTool != null && !aborted && !stopRequested && rounds < MAX_AGENT_ROUNDS)
+                    } while (hadCalls && !aborted && !stopRequested && rounds < MAX_AGENT_ROUNDS)
                 } catch (e: CancellationException) {
                     // Durdur butonu: hata değil, sessizce finally'e düş
                     throw e
@@ -508,8 +533,17 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private fun flushStreamingToUi() {
         val id = streamingMsgId ?: return
         val parsed = ThinkingParser.parseStreaming(streamingRaw.toString())
-        lastParsedThinking = parsed.thinking
-        lastParsedResponse = parsed.response
+        // <tool> blokları ekrana/DB'ye sızmasın; İngilizce cümleler
+        // (Türkçe kipinde) balondan düşünme paneline taşınsın.
+        var think = parsed.thinking
+        var resp = ToolIntentParser.stripToolBlocks(parsed.response)
+        if (turkishOnly) {
+            val g = TurkishGuard.enforce(think, resp)
+            think = g.thinking
+            resp = g.response
+        }
+        lastParsedThinking = think
+        lastParsedResponse = resp
 
         if (parsed.stillThinking) {
             wasThinking = true
@@ -529,8 +563,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             val idx = list.indexOfFirst { it.id == id }
             if (idx >= 0) {
                 list[idx] = list[idx].copy(
-                    content = parsed.response,
-                    thinking = parsed.thinking,
+                    content = resp,
+                    thinking = think,
                     totalMs = now - streamingStartedAt,
                     thinkingMs = thinkMs,
                     streaming = true,
@@ -548,6 +582,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "en" -> "Always respond in English. Never write Turkish."
             "auto" -> ""
             else -> "Her zaman Türkçe cevap ver. Asla İngilizce yazma. " +
+                "İngilizce TEK CÜMLE bile yazma — cevabının her satırı Türkçe olacak. " +
                 "Düşünme metnin bile Türkçe olsun. " +
                 "Cevabına İngilizce giriş cümlesi ekleme; 'The user asks' gibi " +
                 "kendi kendine konuşma. Doğrudan Türkçe cevaba başla."
@@ -567,6 +602,12 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         const val AGENT_PROMPT =
             "AJAN MODU: Araçların var: list_files, read_file, write_file (dosyalar), " +
             "web_search ve fetch_url (internet). " +
+            "ARAÇ ÇAĞIRMA FORMATI (function-calling yoksa bu bloğu aynen yaz): " +
+            "<tool name=\"list_files\">{\"path\": \"\"}</tool> " +
+            "Örnekler: <tool name=\"read_file\">{\"path\": \"Main.kt\"}</tool> " +
+            "<tool name=\"web_search\">{\"query\": \"konu\"}</tool> " +
+            "<tool name=\"write_file\">{\"path\": \"a.txt\", \"content\": \"...\"}</tool> " +
+            "Araç bloğu dışında araç adı yazma; sonucu bekle, sonra Türkçe özetle. " +
             "Kullanıcı kod/proje işi isterse önce list_files ile klasöre bak, " +
             "gerekirse read_file ile oku, sonucu write_file ile yaz. " +
             "Güncel bilgi, kütüphane dokümantasyonu veya hata çözümü gerekiyorsa " +

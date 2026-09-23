@@ -327,12 +327,21 @@ private fun MessageItem(
     // Asistan
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
         // Thinking paneli (araç çalışırken de görünür)
-        if (m.thinking.isNotBlank() || m.thinkingStreaming || m.toolLabel != null) {
+        if (m.thinking.isNotBlank() || m.streaming || m.toolLabel != null) {
+            val ss = when {
+                m.toolLabel != null -> StreamState.Streaming
+                !m.streaming -> StreamState.Done
+                m.thinking.isBlank() && m.content.isBlank() ->
+                    if (m.totalMs < 1000) StreamState.Connecting
+                    else StreamState.WaitingFirstEvent
+                else -> StreamState.Streaming
+            }
             ThinkingPanel(
                 thinking = m.thinking,
                 thinkingMs = m.thinkingMs,
-                totalMs = m.totalMs,
-                isStreaming = m.thinkingStreaming,
+                isStreaming = m.streaming,
+                streamState = ss,
+                streamSeconds = m.totalMs / 1000,
                 toolLabel = m.toolLabel
             )
             Spacer(Modifier.height(8.dp))
