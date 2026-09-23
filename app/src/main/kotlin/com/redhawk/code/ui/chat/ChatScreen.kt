@@ -122,10 +122,8 @@ fun ChatScreen(
             Modifier.padding(pad).fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Divider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
+            Spacer(
+                Modifier.fillMaxWidth().height(1.dp)
                     .background(
                         Brush.horizontalGradient(
                             listOf(
