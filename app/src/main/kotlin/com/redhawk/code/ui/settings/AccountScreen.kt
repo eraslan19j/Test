@@ -23,6 +23,7 @@ fun AccountScreen(prefs: PrefsStore, onBack: () -> Unit) {
     val chats by prefs.totalChats.collectAsState(initial = 0)
     val longest by prefs.longestChat.collectAsState(initial = 0)
     val lastActivity by prefs.lastActivity.collectAsState(initial = "")
+    val userName by prefs.userName.collectAsState(initial = "ReDHawK Kullanıcı")
 
     Scaffold(
         topBar = { TopAppBar(
@@ -48,8 +49,8 @@ fun AccountScreen(prefs: PrefsStore, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("aslan", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold)
+                Text(userName, style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
                     Text("ReDHawK Code · cihaz kullanımı",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
