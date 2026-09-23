@@ -223,7 +223,7 @@ fun PermissionScreen(
 }
 
 @Composable
-private fun ProfileChip(
+private fun RowScope.ProfileChip(
     profile: PermissionProfile,
     selected: Boolean,
     onClick: () -> Unit

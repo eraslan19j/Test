@@ -105,7 +105,7 @@ object AgentTools {
             "run_command" -> {
                 val c = arg(argsJson, "command")
                 if (c.isBlank()) "HATA: command gerekli."
-                else if (!projectUri.isNullOrBlank()) "HATA: komutlar yalnızca uygulama deposunda çalışır. Bağlı klasörde list_files/read_file kullan."
+                else if (!projectUri.isNullOrBlank()) "HATA: run_command bu klasörde ÇALIŞMAZ (bağlı klasör SAF üzerinden erişiliyor). Bunun yerine MUTLAKA list_files aracını kullan: <tool name=\"list_files\">{\"path\": \"\"}</tool>"
                 else Terminal.run(ctx, c)
             }
             "web_search" -> {

@@ -407,6 +407,10 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             }
 
             generationJob = viewModelScope.launch {
+                // finally bloğu da erişebilsin diye try dışında tanımlanır
+                var aborted = false
+                var temp = 0.7f
+                var maxTok = 2048
                 try {
                     val agentOn = _state.value.agentMode
                     val sysPromptBase = prefs.systemPrompt.first()
@@ -420,8 +424,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     turkishOnly = effLang == "tr"
                     val sysPrompt = buildSystemPrompt(sysPromptBase, agentOn, effLang)
                     // Ayarlardan: sıcaklık + maksimum token (gerçekten uygulanır)
-                    val temp = prefs.temperature.first()
-                    val maxTok = prefs.maxTokens.first()
+                    temp = prefs.temperature.first()
+                    maxTok = prefs.maxTokens.first()
 
                     val history = _state.value.messages
                         .filter { it.id != userMsg.id && it.id != assistantMsg.id && !it.streaming }
@@ -465,7 +469,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     val convo = all.toMutableList()
                     val tools = if (agentOn) AgentTools.specs else emptyList()
                     var rounds = 0
-                    var aborted = false
+                    aborted = false
                     var pendingTool: ToolCall? = null
                     var hadCalls = false
                     do {
@@ -520,6 +524,52 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                             }
                         }
                     } while (hadCalls && !aborted && !stopRequested && rounds < MAX_AGENT_ROUNDS)
+
+                    // Güvenlik ağı: zayıf model klasör/dosya sorulduğu halde
+                    // hiç tool çağırmadan (soru sorarak) bitirdiyse, bağlı
+                    // klasörün kökünü otomatik listeleyip son bir tur daha ver.
+                    val folderWords = listOf(
+                        "klasör", "klasor", "dosya", "proje", "workspace",
+                        "içerik", "icerik"
+                    )
+                    val projectUriForRescue =
+                        runCatching { repo.getChat(chatId)?.projectUri }.getOrNull()
+                    if (agentOn && rounds == 0 && !aborted && !stopRequested &&
+                        !projectUriForRescue.isNullOrBlank() &&
+                        folderWords.any { text.lowercase().contains(it) }
+                    ) {
+                        val roundStart = streamingRaw.length
+                        val prevText = streamingRaw.substring(roundStart).let {
+                            ToolIntentParser.stripToolBlocks(
+                                ThinkingParser.parseStreaming(it).response)
+                        }
+                        updateToolLabel("⚙ list_files çalışıyor…")
+                        val rescueResult = runCatching {
+                            AgentTools.execute(
+                                getApplication(), projectUriForRescue, "list_files", "{}")
+                        }.getOrElse { "HATA: araç çalışamadı: ${it.message}" }
+                        updateToolLabel(null)
+                        convo.add(ChatMessage(
+                            Role.ASSISTANT, content = prevText,
+                            toolCalls = listOf(ToolCall("rescue_${now}", "list_files", "{}"))))
+                        convo.add(ChatMessage(
+                            Role.TOOL, content = rescueResult,
+                            toolCallId = "rescue_${now}", toolName = "list_files"))
+                        p.chat(convo, tools, modelId, temp, maxTok).collect { ev ->
+                            if (stopRequested) return@collect
+                            when (ev) {
+                                is LlmEvent.TextDelta -> {
+                                    streamingRaw.append(ev.text)
+                                    uiTick.trySend(Unit)
+                                }
+                                is LlmEvent.Error -> {
+                                    _state.update { it.copy(error = ev.message) }
+                                    if (ev.quotaExceeded) quotaFailed = true
+                                }
+                                else -> {}
+                            }
+                        }
+                    }
                 } catch (e: CancellationException) {
                     // Durdur butonu: hata değil, sessizce finally'e düş
                     throw e
@@ -539,6 +589,47 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     // Yarım kalan metni bile kaydet (iptal sonrası NonCancellable şart)
                     withContext(NonCancellable) {
                         flushStreamingToUi()
+
+                        // Model Türkçe üretemediyse (TurkishGuard her şeyi düşünme
+                        // paneline taşıdı): ham İngilizce çıktıyı tek seferlik ekstra
+                        // bir turla modele geri verip SADECE Türkçeye çevirmesini iste.
+                        if (turkishOnly && !stopRequested && !aborted &&
+                            lastParsedResponse.trim() == TurkishGuard.FALLBACK &&
+                            lastParsedThinking.isNotBlank()
+                        ) {
+                            runCatching {
+                                val rawEnglish = lastParsedThinking.takeLast(4000)
+                                val translatePrompt = listOf(
+                                    ChatMessage(
+                                        Role.SYSTEM,
+                                        "Sen bir çevirmensin. Sana verilen metni SADECE Türkçeye " +
+                                            "çevir. Yorum ekleme, açıklama yapma, araç adlarından " +
+                                            "bahsetme. Doğrudan Türkçe metinle başla."
+                                    ),
+                                    ChatMessage(Role.USER, rawEnglish)
+                                )
+                                val sb = StringBuilder()
+                                p.chat(translatePrompt, emptyList(), modelId, temp, maxTok)
+                                    .collect { ev ->
+                                        if (ev is LlmEvent.TextDelta) sb.append(ev.text)
+                                    }
+                                val translated = sb.toString().trim()
+                                if (translated.isNotBlank()) {
+                                    lastParsedResponse = translated
+                                    val id = streamingMsgId
+                                    if (id != null) {
+                                        _state.update { st ->
+                                            val list = st.messages.toMutableList()
+                                            val idx = list.indexOfFirst { it.id == id }
+                                            if (idx >= 0) list[idx] =
+                                                list[idx].copy(content = translated)
+                                            st.copy(messages = list)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         val finalCombined = ThinkingParser.mergeForDb(
                             lastParsedThinking, lastParsedResponse)
                         runCatching { repo.updateMessageContent(assistantMsg.id, finalCombined) }
@@ -704,16 +795,28 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "<tool name=\"web_search\">{\"query\": \"konu\"}</tool> " +
             "<tool name=\"write_file\">{\"path\": \"a.txt\", \"content\": \"...\"}</tool> " +
             "Araç bloğu dışında araç adı yazma; sonucu bekle, sonra Türkçe özetle. " +
-            "Kullanıcı klasör veya dosya sorarsa SORU SORMA: önce list_files ile " +
-            "köke bak, sonucu görmeden 'yapabilirim' deme. " +
-            "run_command ile komut çalıştırabilirsin (ls, cat, grep, find, git " +
-            "status/log/diff; salt-okunur, uygulama deposunda). " +
+            "ÇOK ÖNEMLİ: Kullanıcının zaten bağladığı BİR TEK klasör var, başka " +
+            "klasör YOK. 'klasör', 'proje', 'burada' gibi kelimeler hep O bağlı " +
+            "klasörü işaret eder. 'Hangi klasör?' diye SORMA — path parametresini " +
+            "boş string \"\" bırak, bu otomatik olarak bağlı klasörün KÖKÜ demektir. " +
+            "Örnek: kullanıcı 'klasördeki dosyaları listele' derse HEMEN şunu yaz: " +
+            "<tool name=\"list_files\">{\"path\": \"\"}</tool> — başka hiçbir şey yazma, " +
+            "soru sorma, onay isteme. Sonucu gördükten SONRA Türkçe özetle. " +
+            "Bir klasör bağlıysa SADECE list_files/read_file kullan, " +
+            "run_command orada ÇALIŞMAZ ve hata döner — hata dönerse kullanıcıya " +
+            "'boş' deme, hatayı gör ve list_files dene. Dosyaları boyuta göre " +
+            "sıralamak için list_files sonucundaki '[F] NNb isim' formatını oku " +
+            "ve NN (bayt) değerine göre kendin sırala; run_command'a gerek yok. " +
+            "run_command SADECE klasör bağlı değilse (uygulama deposunda) " +
+            "çalışır (ls, cat, grep, find, git status/log/diff; salt-okunur). " +
             "Kullanıcı kod/proje işi isterse önce list_files ile klasöre bak, " +
             "gerekirse read_file ile oku, sonucu write_file ile yaz. " +
             "Güncel bilgi, kütüphane dokümantasyonu veya hata çözümü gerekiyorsa " +
             "web_search ile ara, gerekirse fetch_url ile sayfayı oku. " +
             "write_file öncesi kullanıcıdan onay istenir, reddedilirse ısrar etme. " +
             "Yollar çalışma köküne göredir (örn: 'Main.kt', 'src/app.py'). " +
-            "Türkçe konuş, açıklamaları kısa tut, yaptığın işlemleri maddelerle özetle."
+            "ÖNEMLİ: Araç sonuçlarını (İngilizce dosya adları, hata mesajları) " +
+            "işlerken bile kendi cümlelerin HER ZAMAN Türkçe olsun. Kısa, net, " +
+            "profesyonel bir dille yaz; gereksiz selamlama veya dolgu cümle kullanma."
     }
 }

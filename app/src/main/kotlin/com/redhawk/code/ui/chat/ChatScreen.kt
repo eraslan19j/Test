@@ -352,38 +352,8 @@ private fun MessageItem(
         val showResponse = m.content.isNotBlank() || !m.thinkingStreaming
         if (showResponse) {
                 if (m.content.isEmpty() && m.streaming) {
-                    // Animasyonlu "yazıyor" göstergesi + canlı geçen süre
-                    val inf = rememberInfiniteTransition(label = "typing")
-                    val ph by inf.animateFloat(0f, 3f,
-                        infiniteRepeatable(tween(1200, easing = LinearEasing),
-                            RepeatMode.Restart),
-                        label = "ph")
-                    // Canlı süre sayacı (1 sn'de bir güncellenir)
-                    var ms by remember(m.id) { mutableLongStateOf(0L) }
-                    LaunchedEffect(m.id) {
-                        val t0 = System.currentTimeMillis()
-                        while (true) {
-                            kotlinx.coroutines.delay(50)
-                            ms = System.currentTimeMillis() - t0
-                        }
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        repeat(3) { i ->
-                            val a = 0.25f + 0.75f *
-                                (0.5f + 0.5f * kotlin.math.sin((ph - i) * 2.094f))
-                            Box(
-                                Modifier.size(8.dp).clip(CircleShape)
-                                    .background(
-                                        MaterialTheme.colorScheme.primary.copy(alpha = a)
-                                    )
-                            )
-                            if (i < 2) Spacer(Modifier.width(6.dp))
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Text("yazıyor… %.1f sn".format(ms / 1000.0),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    // Üstteki ThinkingPanel zaten durum/süre gösteriyor;
+                    // burada ikinci bir gösterge tekrar etmesin.
                 } else {
                     Text(
                         text = m.content.ifEmpty { "⚠ Model boş yanıt döndü" },

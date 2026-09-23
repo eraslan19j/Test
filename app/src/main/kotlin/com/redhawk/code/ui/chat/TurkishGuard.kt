@@ -196,6 +196,13 @@ object TurkishGuard {
     }
 
     /** (önek-eşleşmesi, İngilizce-kelime-sayısı) */
+    /** Türkçeye özgü ek kalıpları (kaba ama etkili sezgi) */
+    private val TR_SUFFIX = Regex(
+        "(lar|ler|dır|dir|dur|dür|tır|tir|tur|tür|mış|miş|muş|müş|" +
+            "yor|acak|ecek|sın|sin|sun|sün|nız|niz|nuz|nüz|" +
+            "de|da|te|ta|nin|nın|nun|nün|ki)$"
+    )
+
     private fun enScore(s: String): Pair<Boolean, Int> {
         val neutral = TOOL_TOKEN.replace(s, "TOOLX")
         val low = neutral.lowercase()
@@ -203,7 +210,20 @@ object TurkishGuard {
             .replace(Regex("\\s+"), " ").trim()
         if (low.trimEnd('.', '!', '?', '…', ' ') in LONE_ENGLISH) return true to 99
         if (SELF_TALK_START.any { low.startsWith(it) }) return true to 99
+        // Tırnak temizlenmeden ÖNCE de kontrol et: "User asks: "..."" gibi
+        // cümleler tırnak-sıyırma sonrası başlangıcını kaybedebilir.
+        val rawLow = neutral.lowercase().trim()
+        if (SELF_TALK_START.any { rawLow.startsWith(it) }) return true to 99
         val tokens = low.split(Regex("[^a-zçğıöşü]+")).filter { it.length >= 2 }
-        return false to tokens.count { it in EN_WORDS }
+        val wordScore = tokens.count { it in EN_WORDS }
+        if (wordScore >= 2) return false to wordScore
+        // Sözlük-dışı genel sezgi: 3+ kelimelik, Türkçe eki/karakteri
+        // OLMAYAN cümleler büyük olasılıkla İngilizcedir.
+        if (tokens.size >= 3) {
+            val hasTrSuffix = tokens.any { TR_SUFFIX.containsMatchIn(it) }
+            val hasTrChar = s.any { it in TR_CHARS }
+            if (!hasTrSuffix && !hasTrChar) return true to 2
+        }
+        return false to wordScore
     }
 }
