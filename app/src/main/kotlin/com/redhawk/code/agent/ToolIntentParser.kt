@@ -19,7 +19,7 @@ object ToolIntentParser {
 
     data class Intent(val name: String, val argsJson: String)
 
-    val TOOL_NAMES = listOf("list_files", "read_file", "write_file", "web_search", "fetch_url")
+    val TOOL_NAMES = listOf("list_files", "read_file", "write_file", "web_search", "fetch_url", "run_command")
 
     private val TOOL_TAG = Regex(
         "<tool\\s+name=[\"']([a-z_]+)[\"']\\s*>(.*?)</tool>",
@@ -27,13 +27,13 @@ object ToolIntentParser {
     )
     // "Use tool list_files ..." / "Use list_files ..." / "Use the list_files ..."
     private val USE_TOOL = Regex(
-        "\\buse\\s+(?:the\\s+|a\\s+)?(?:tool\\s+)?(list_files|read_file|web_search|fetch_url)\\b",
+        "\\buse\\s+(?:the\\s+|a\\s+)?(?:tool\\s+)?(list_files|read_file|web_search|fetch_url|run_command)\\b",
         RegexOption.IGNORE_CASE
     )
     private val LIST_SP = Regex("\\blist\\s+files?\\b", RegexOption.IGNORE_CASE)
     private val READ_SP = Regex("\\bread\\s+(?:the\\s+)?files?\\b", RegexOption.IGNORE_CASE)
     private val BARE_QUOTED = Regex(
-        "\\b(list_files|read_file|web_search|fetch_url)\\b[^()\\n\"“]{0,40}[\"“]([^\"”\\n]{1,200})[\"”]"
+        "\\b(list_files|read_file|web_search|fetch_url|run_command)\\b[^()\\n\"“]{0,40}[\"“]([^\"”\\n]{1,200})[\"”]"
     )
     private val QUOTED = Regex("[\"“]([^\"”\\n]{1,200})[\"”]")
     // Boşluklu doğal dil, eylem niyetiyle birlikteyse sayılır
@@ -200,6 +200,7 @@ object ToolIntentParser {
         val key = when (name) {
             "web_search" -> "query"
             "fetch_url" -> "url"
+            "run_command" -> "command"
             else -> "path"
         }
         val esc = v.replace("\\", "\\\\").replace("\"", "\\\"")

@@ -36,6 +36,11 @@ object AgentTools {
             name = "fetch_url",
             description = "Bir web sayfasını okuyup düz metne çevirir (en fazla 8000 karakter). Dokümantasyon ve makale okumak için kullan.",
             parametersJsonSchema = """{"type":"object","properties":{"url":{"type":"string","description":"http(s) ile başlayan sayfa adresi"}},"required":["url"]}"""
+        ),
+        ToolSpec(
+            name = "run_command",
+            description = "Uygulama deposunda salt-okunur komut çalıştırır: ls, cat, head, tail, find, grep, wc, du, stat, file, echo, pwd, uname, date, git (status/log/diff/branch). Shell yok, pipe/yönlendirme yok. Bağlı klasörde (SAF) çalışmaz; orada list_files/read_file kullan.",
+            parametersJsonSchema = """{"type":"object","properties":{"command":{"type":"string","description":"Çalıştırılacak komut, örn: 'ls -la', 'grep -r parola src'"}},"required":["command"]}"""
         )
     )
 
@@ -66,6 +71,12 @@ object AgentTools {
             "fetch_url" -> {
                 val u = arg(argsJson, "url")
                 if (u.isBlank()) "HATA: url gerekli." else WebTools.fetch(u)
+            }
+            "run_command" -> {
+                val c = arg(argsJson, "command")
+                if (c.isBlank()) "HATA: command gerekli."
+                else if (!projectUri.isNullOrBlank()) "HATA: komutlar yalnızca uygulama deposunda çalışır. Bağlı klasörde list_files/read_file kullan."
+                else Terminal.run(ctx, c)
             }
             else -> "HATA: bilinmeyen araç '$name'."
         }

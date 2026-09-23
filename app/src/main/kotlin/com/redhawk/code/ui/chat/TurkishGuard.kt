@@ -1,18 +1,17 @@
 package com.redhawk.code.ui.chat
 
 /**
- * TÜRKÇE GARANTİSİ (v2): model direktifi yok saysa bile cevap
+ * TÜRKÇE GARANTİSİ (v2.1): model direktifi yok saysa bile cevap
  * balonunda İngilizce cümle kalmaz. İngilizce SİLİNMEZ — düşünme
  * paneline taşınır (panel kapalı durur, bilgi kaybolmaz).
  *
- * İki katman (kök çözüm):
+ * İki katman:
  *  1. BELGE düzeyi: kod dışı metnin TAMAMI İngilizceyse toptan taşı.
- *     (Cümle-cümle sezgiler tek başına hep delinir.)
  *  2. CÜMLE düzeyi: karışık metinde İngilizce cümleleri ayıkla.
  *
  * Korunanlar: ``` kod blokları, satır-içi `kod`, URL, yol,
- * araç adları (list_files vb. nötrlenir — Türkçe cümleyi yakmaz).
- * Sadece yanıt dili Türkçe iken uygulanır (VM'de turkishOnly).
+ * araç adları (TOOLX'e nötrlenir). Güçlü İngilizce sinyali
+ * (önek veya skor≥3) kod-vetosunu deler.
  */
 object TurkishGuard {
 
@@ -22,9 +21,11 @@ object TurkishGuard {
         "Model Türkçe yanıt üretemedi. Ham çıktıyı düşünme panelinden görebilirsin."
 
     private val TR_CHARS = setOf('ç', 'Ç', 'ğ', 'Ğ', 'ı', 'İ', 'ö', 'Ö', 'ş', 'Ş', 'ü', 'Ü')
-    private val SENT_SPLIT = Regex("(?<=[.!?…])\\s+|(?<=\\.)(?=[A-ZÇĞİÖŞÜ])")
+    // Yapışık cümleler de bölünür: "summarize.- Çalışma..." gibi
+    private val SENT_SPLIT = Regex("(?<=[.!?…])\\s+|(?<=[.!?…])[-–—]+\\s*|(?<=\\.)(?=[A-ZÇĞİÖŞÜ])")
     private const val FENCE = "```"
-    private val TOOL_TOKEN = Regex("\\b(list_files|read_file|write_file|web_search|fetch_url)\\b")
+    private val TOOL_TOKEN =
+        Regex("\\b(list_files|read_file|write_file|web_search|fetch_url|run_command)\\b")
     private val INLINE_CODE = Regex("`[^`\\n]*`")
 
     /** Küçük modellerin kendi-kendine-konuşma girişleri */
@@ -36,7 +37,7 @@ object TurkishGuard {
         "i should", "i must", "i need", "i will", "i'll", "i am going",
         "i can", "i am ", "i'm ", "i've ", "i have ", "i just ",
         "i don't", "i do not", "i will check", "let's", "let us", "let me",
-        "according to policy", "the instructions say",
+        "according to", "the instructions say",
         "the developer says", "my response", "in this response",
         "okay,", "certainly", "first,", "to answer", "to list", "to read",
         "the assistant", "based on", "in order to", "it seems",
@@ -46,7 +47,8 @@ object TurkishGuard {
         "the folder", "the file", "the files", "your folder",
         "the current", "current directory", "the directory",
         "in the current", "the path", "for example", "such as",
-        "no problem", "checking ", "listing ", "reading ", "searching "
+        "no problem", "checking ", "listing ", "reading ", "searching ",
+        "the response shows", "so we can", "we can summarize"
     )
 
     /** Tek başına İngilizce olan kısa yanıtlar */
@@ -55,11 +57,7 @@ object TurkishGuard {
         "thanks", "thank you", "of course", "all done", "no problem"
     )
 
-    /**
-     * Yaygın İngilizce kelimeler. Araç-adı benzerleri (list/file/path…)
-     * GÜVENLİDİR çünkü gerçek araç adları önce TOOLX'e nötrlenir ve
-     * Türkçe çekimler ("listeyi", "path'i") zaten eşleşmez.
-     */
+    /** Yaygın İngilizce kelimeler (araç adları önce TOOLX'e nötrlenir) */
     private val EN_WORDS = setOf(
         "the", "and", "for", "with", "from", "that", "this", "these", "those",
         "you", "your", "yours", "they", "them", "their", "theirs", "he", "she",
@@ -79,7 +77,7 @@ object TurkishGuard {
         "use", "using", "used", "tool", "tools",
         "list", "lists", "listed", "listing", "file", "files",
         "folder", "folders", "directory", "directories",
-        "path", "paths", "empty", "root"
+        "path", "paths", "empty", "root", "shows", "show", "likely"
     )
 
     fun enforce(thinking: String, response: String): Result {
@@ -153,23 +151,31 @@ object TurkishGuard {
         if (bare.isEmpty()) return false
         // Türkçe karakter varsa Türkçe'dir (en güçlü sinyal)
         if (bare.any { it in TR_CHARS }) return false
-        // Kod/yol/URL kokan satırlara dokunma
-        if (bare.contains("http") || bare.contains("://") || bare.contains('`')) return false
-        if (bare.contains('/') || bare.contains('\\')) return false
-        if (bare.count { it in "(){}[];=<>|\"" } >= 2) return false
         if (bare.filter { it.isLetter() }.length < 6) return false
-        return looksEnglish(bare)
+        // Kod/yol/URL kokusu vetosu — ama güçlü sinyal vetoyu deler
+        // ("The response shows three items (prefixed [D])." gibi)
+        val vetoed = bare.contains("http") || bare.contains("://") ||
+            bare.contains('`') || bare.contains('/') || bare.contains('\\') ||
+            bare.count { it in "(){}[];=<>|\"" } >= 2
+        val (prefix, score) = enScore(bare)
+        if (vetoed) return prefix || score >= 3
+        return prefix || score >= 2
     }
 
-    /** Araç adları nötrlenir, sonra önek + kelime skoru bakılır */
     private fun looksEnglish(s: String): Boolean {
+        val (prefix, score) = enScore(s)
+        return prefix || score >= 2
+    }
+
+    /** (önek-eşleşmesi, İngilizce-kelime-sayısı) */
+    private fun enScore(s: String): Pair<Boolean, Int> {
         val neutral = TOOL_TOKEN.replace(s, "TOOLX")
         val low = neutral.lowercase()
             .replace(Regex("\"[^\"]*\""), " ")
             .replace(Regex("\\s+"), " ").trim()
-        if (low.trimEnd('.', '!', '?', '…', ' ') in LONE_ENGLISH) return true
-        if (SELF_TALK_START.any { low.startsWith(it) }) return true
+        if (low.trimEnd('.', '!', '?', '…', ' ') in LONE_ENGLISH) return true to 99
+        if (SELF_TALK_START.any { low.startsWith(it) }) return true to 99
         val tokens = low.split(Regex("[^a-zçğıöşü]+")).filter { it.length >= 2 }
-        return tokens.count { it in EN_WORDS } >= 2
+        return false to tokens.count { it in EN_WORDS }
     }
 }

@@ -170,9 +170,20 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun MessageEntity.toUi(): UiMessage {
         val parsed = ThinkingParser.parseStored(content)
+        // Güvenlik ağı: guardsız yazılmış eski/kayıtlı mesajları da temizle
+        val think: String
+        val resp: String
+        if (!isUser && turkishOnly) {
+            val g = TurkishGuard.enforce(parsed.thinking, parsed.response)
+            think = g.thinking
+            resp = g.response
+        } else {
+            think = parsed.thinking
+            resp = parsed.response
+        }
         return UiMessage(
-            id = id, isUser = isUser, content = parsed.response, createdAt = createdAt,
-            thinking = parsed.thinking, error = error
+            id = id, isUser = isUser, content = resp, createdAt = createdAt,
+            thinking = think, error = error
         )
     }
 
@@ -351,10 +362,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                 try {
                     val agentOn = _state.value.agentMode
                     val sysPromptBase = prefs.systemPrompt.first()
-                    val sysPrompt = buildSystemPrompt(sysPromptBase, agentOn)
+                    val langPref = runCatching { prefs.responseLang.first() }
+                        .getOrDefault("tr")
+                    // "auto" GERÇEKTEN otomatik: kullanıcının mesajından dili anla.
+                    // (Eskiden auto = direktifsiz + guardsız = ham İngilizce demekti.)
+                    val effLang = if (langPref == "auto") {
+                        if (looksTurkish(text)) "tr" else "en"
+                    } else langPref
+                    turkishOnly = effLang == "tr"
+                    val sysPrompt = buildSystemPrompt(sysPromptBase, agentOn, effLang)
                     // Ayarlardan: sıcaklık + maksimum token (gerçekten uygulanır)
-                    turkishOnly = runCatching { prefs.responseLang.first() }
-                        .getOrDefault("tr") == "tr"
                     val temp = prefs.temperature.first()
                     val maxTok = prefs.maxTokens.first()
 
@@ -576,8 +593,27 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun buildSystemPrompt(base: String, agent: Boolean): String {
-        val lang = runCatching { prefs.responseLang.first() }.getOrDefault("tr")
+    /** "auto" dil kipi: kullanıcının mesajı Türkçe mi? */
+    private fun looksTurkish(s: String): Boolean {
+        if (s.any { it in "çÇğĞıİöÖşŞüÜ" }) return true
+        val padded = " " + s.lowercase().replace(Regex("[^a-zçğıöşü ]"), " ") + " "
+        val hints = setOf(
+            "merhaba", "selam", "evet", "hayir", "tamam", "lutfen", "nasil",
+            "neden", "nicin", "nerede", "hangi", "hangisi", "bana", "beni",
+            "bize", "bizi", "sana", "seni", "size", "sizi", "icin", "veya",
+            "gibi", "kadar", "sonra", "once", "degil", "olarak", "cunku",
+            "acaba", "nedir", "kimdir", "musun", "misin", "mısın", "müsün",
+            "mudur", "midir", "mıdır", "müdür", "bunlar", "sunlar", "onlar",
+            "kimse", "birsey", "birşey", "sey", "şey", "soyle", "boyle",
+            "sunu", "bunu", "onu", "yapar", "verir", "soylar", "soylar",
+            "yazar", "anlat", "acikla", "listele", "goster", "duzelt",
+            "olustur", "calistir", "guncelle", "kaydet", "klasor", "dosya",
+            "hata", "komut", "yap", "bul", "sil", "oku", "yaz", "ekle", "kod"
+        )
+        return hints.any { padded.contains(" $it ") }
+    }
+
+    private fun buildSystemPrompt(base: String, agent: Boolean, lang: String): String {
         val directive = when (lang) {
             "en" -> "Always respond in English. Never write Turkish."
             "auto" -> ""
@@ -610,6 +646,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             "Araç bloğu dışında araç adı yazma; sonucu bekle, sonra Türkçe özetle. " +
             "Kullanıcı klasör veya dosya sorarsa SORU SORMA: önce list_files ile " +
             "köke bak, sonucu görmeden 'yapabilirim' deme. " +
+            "run_command ile komut çalıştırabilirsin (ls, cat, grep, find, git " +
+            "status/log/diff; salt-okunur, uygulama deposunda). " +
             "Kullanıcı kod/proje işi isterse önce list_files ile klasöre bak, " +
             "gerekirse read_file ile oku, sonucu write_file ile yaz. " +
             "Güncel bilgi, kütüphane dokümantasyonu veya hata çözümü gerekiyorsa " +

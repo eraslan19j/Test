@@ -23,7 +23,8 @@ object ThinkingParser {
         "i should", "i must", "i need to", "i will respond",
         "let's", "let us", "follow", "according to policy",
         "the instructions say", "the developer says",
-        "should be short", "provide ", "my response", "in this response"
+        "should be short", "provide ", "my response", "in this response",
+        "according to", "the response shows", "so we can", "the output shows"
     )
     private val TR_CHARS = setOf('ç', 'Ç', 'ğ', 'Ğ', 'ı', 'İ', 'ö', 'Ö', 'ş', 'Ş', 'ü', 'Ü')
     private val SENT_SPLIT = Regex("(?<=[.!?…])\\s+|(?<=\\.)(?=[A-ZÇĞİÖŞÜ])")
