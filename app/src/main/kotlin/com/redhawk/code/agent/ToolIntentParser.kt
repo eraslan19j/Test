@@ -19,7 +19,12 @@ object ToolIntentParser {
 
     data class Intent(val name: String, val argsJson: String)
 
-    val TOOL_NAMES = listOf("list_files", "read_file", "write_file", "web_search", "fetch_url", "run_command")
+    // Yıkıcı araçlar (delete/move/chmod) listede VAR (TAG+fonksiyon çalışır)
+    // ama doğal-dil kalıplarına EKLENMEZ (yanlışlıkla tetiklenmesin).
+    val TOOL_NAMES = listOf(
+        "list_files", "read_file", "write_file", "delete_file", "move_file",
+        "chmod_file", "web_search", "fetch_url", "run_command"
+    )
 
     private val TOOL_TAG = Regex(
         "<tool\\s+name=[\"']([a-z_]+)[\"']\\s*>(.*?)</tool>",
@@ -201,6 +206,7 @@ object ToolIntentParser {
             "web_search" -> "query"
             "fetch_url" -> "url"
             "run_command" -> "command"
+            "move_file" -> "from"
             else -> "path"
         }
         val esc = v.replace("\\", "\\\\").replace("\"", "\\\"")

@@ -51,6 +51,7 @@ fun AppDrawer(
         ),
         "ÇALIŞMA ALANI" to listOf(
             DrawerEntry.Link("Dosyalar", Icons.Outlined.Folder, "files"),
+            DrawerEntry.Link("Ajan izinleri", Icons.Outlined.AdminPanelSettings, "permissions"),
         ),
         "SİSTEM" to listOf(
             DrawerEntry.Link("Ayarlar", Icons.Outlined.Settings, "settings"),

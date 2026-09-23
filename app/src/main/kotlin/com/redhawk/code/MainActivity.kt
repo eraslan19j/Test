@@ -221,7 +221,7 @@ private fun MainNav(activity: ComponentActivity) {
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onOpenChats = { nav.push("chatlist") },
                     onOpenProject = { },
-                    onOpenPermissions = { }
+                    onOpenPermissions = { nav.push("permissions") }
                 )
 
                 "settings" -> SettingsScreen(
@@ -242,6 +242,11 @@ private fun MainNav(activity: ComponentActivity) {
                     vm = chatVm,
                     onBack = { nav.pop() },
                     onOpenDrawer = { scope.launch { drawerState.open() } }
+                )
+
+                "permissions" -> com.redhawk.code.ui.permissions.PermissionScreen(
+                    vm = chatVm,
+                    onBack = { nav.pop() }
                 )
 
                 else -> Scaffold(

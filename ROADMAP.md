@@ -5,49 +5,56 @@ Hedef: mobilde Codex seviyesinde, ücretsiz modellerle çalışan en güçlü ya
 ## Mimari (özet)
 
 ```
-ui/            → Compose ekranları (chat, files, provider, settings, onboarding)
+ui/            → Compose ekranları (chat, files, provider, permissions, settings, onboarding)
 ui/chat/       → ChatViewModel = sohbet + ajan orkestrasyonu + otomatik sağlayıcı geçişi
 ui/chat/       → ThinkingPanel (iki seviyeli) + ThinkingParser + TurkishGuard
+ui/home/       → StarfieldBackground + HomeHeader (premium animasyonlu giriş)
 ui/files/      → Dosya gezgini + metin editörü (ajan deposu / proje klasörü)
-agent/         → AgentTools + ToolIntentParser + ProjectFiles + WebTools + Terminal
+ui/permissions → Ajan izinleri (profil + izinler + chmod) → DataStore → döngüde denetim
+agent/         → AgentTools (9 araç) + ToolIntentParser + ProjectFiles + WebTools + Terminal
+agent/         → Permission.kt (profil/izin kataloğu + araç eşleşmesi)
 llm/           → LlmProvider arayüzü + OpenAI-uyumlu istemci + DuckAiProvider (anahtarsız)
 data/db        → Room (chats, messages, providers)
-data/prefs     → DataStore ayarlar
+data/prefs     → DataStore ayarlar (dil, tema, ajan izinleri, chmod...)
 data/provider  → ProviderCatalog (hazır presetler)
 ```
 
 Kural: yeni yapay zeka = `ProviderCatalog`'a 1 preset (+gerekirse ProviderFactory'e 1 dal).
 Yeni ajan aracı = `AgentTools.specs`'e 1 ToolSpec + `execute`'e 1 dal +
-`ToolIntentParser.TOOL_NAMES`'e adı ekle (metin niyeti de çalışsın).
+`ToolIntentParser.TOOL_NAMES`'e adı ekle + `PermissionCatalog.permissionFor`'a eşle.
+(Yıkıcı araçlar doğal-dil kalıplarına EKLENMEZ.)
 Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model).
 Ölü buton YASAK: menüye eklenen her şey çalışmak zorunda.
 
 ## Yapıldı
 
-### v0.2 – v0.13 (özet)
+### v0.2 – v0.14 (özet)
 - [x] Ajan Faz 1+2, kartal ikon, animasyonlu ana ekran
 - [x] 19 sağlayıcı kartı (~75 model), otomatik kota geçişi
-- [x] Sessiz "…" ölü, dil seçeneği, referans ThinkingPanel
-- [x] Türkçe garantisi v1-v2, balonsuz AI, TTS, zengin menü
+- [x] Sessiz "…" ölü, akıllı auto dil, referans ThinkingPanel
+- [x] Türkçe garantisi v2.1 (belge+cümle katmanı), balonsuz AI, TTS
 - [x] Gerçek açık/koyu/sistem teması, selamlamalı ana ekran
 - [x] TTS build fix, Dosyalar ekranı (gezgin + editör)
-- [x] Metin-içi araç niyeti v1-v2, belge-düzeyi İngilizce kararı
+- [x] Metin-içi araç niyeti v2, run_command terminali (salt-okunur)
 
-### v0.14 — Gerçek Auto + Guard 2.1 + Terminal
-- [x] KÖK NEDEN BULUNDU: dil "auto" iken Guard kapalı + direktif
-      yoktu = ham İngilizce. Artık "auto" mesajdan dili anlar
-      (Türkçe karakter + 70 Türkçe ipucu kelime): Türkçe→Türkçe
-      direktif + Guard, İngilizce→İngilizce
-- [x] toUi güvenlik ağı: guardsız yazılmış eski mesajlar bile
-      ekranda temizlenir (idempotent, bilgi panele taşınır)
-- [x] Guard 2.1: yapışık cümle bölünür ("summarize.-"), "according
-      to / the response shows / so we can" önekleri, güçlü sinyal
-      (skor≥3) kod-vetosunu deler
-- [x] Terminal: run_command ajanı (ls, cat, grep, find, git
-      status/log/diff...) — salt-okunur allowlist, shell yok,
-      10 sn + 8KB sınır, uygulama deposunda çalışır
-- [x] Araştırma doğruladı: prompt'a güven %82 başarısız, çıktı
-      denetimi (output rails) endüstri standardı
+### v0.15 — Meta-Filtresi + Canlı Sayaç + Premium Ana Ekran + İzinler
+- [x] Meta-filtresi: "komutunu çalıştırdım / aracı kullandım" tarzı
+      öz-anlatım balondan panele taşınır (sonuç cümlesi korunur);
+      "Then summarize." gibi artıklar yakalanır
+- [x] Canlı ms sayaç: üretim boyunca 100ms tick (0'da takılma
+      bitti), panelde "2.0 s" + "SSE · 2.0 sn ·" ondalıklı
+- [x] Premium ana ekran: kayan yıldızlar + kayan-yıldız çizgileri
+      (Canvas), nefes alan 34sp ReDHawK başlığı
+- [x] Ajan izinleri ekranı (referans tasarıma sadık): profil
+      çipleri, 6 izin satırı, chmod ızgarası + rwx özeti,
+      İPTAL/KAYDET ile DataStore'a yazılır
+- [x] GERÇEK denetim: her araç çağrısı öncesi izin kontrolü
+      (kapalıysa model alternatife yönlendirilir); chmod 777 =
+      onay diyalogları atlanır, AI otomatik devam eder
+- [x] 3 yeni araç: delete_file, move_file (SAF kopyala-sil destekli),
+      chmod_file (uygulama deposu) + write_file diff önizlemesi
+- [x] Girişler: menü "Ajan izinleri" + hızlı işlemler kartı +
+      ölü onOpenPermissions canlandırıldı
 
 ## Bilinen doğrular (ekran görüntülerinden)
 
@@ -59,10 +66,7 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 - Pollinations anahtarsız öldü. Bedava: LLM7, OVH, Duck.ai, Dahl,
   NaraRouter, KiraAI-mini, Atria.
 
-## Sıradaki (referans uygulamadan — önerilen sıra)
-
-### v0.15 — Ajan Dosya Araçları v2
-- [ ] `delete_file` ajan aracı (onaylı) + write_file diff önizleme
+## Sıradaki
 
 ### v1.0 — Proje + Kurallar
 - [ ] Proje kökü, redhawk.json, tam terminal yetkisi (onaylı)
@@ -74,12 +78,11 @@ Manuel sağlayıcı = kurulum ekranındaki "Özel uç" kartı (URL + key + model
 
 ## Test listesi (AndroidIDE build sonrası)
 
-1. Dil "Otomatik" iken Türkçe sor → balon saf Türkçe mi
-2. Dil "Otomatik" iken "list files in this folder" (İngilizce sor)
-   → İngilizce cevap geliyor mu (doğru davranış)
-3. ESKİ İngilizce mesajlar bile temiz görünüyor mu (toUi ağı)
-4. Ajan AÇIK (uygulama deposu), "ls -la çalıştır" → komut
-   sonucu Türkçe özetle geliyor mu
-5. Bağlı klasörde (SAF) run_command → düzgün HATA + dosya
-   araçlarına yönlendirme var mı
-6. "summarize.-" yapışık cümleler ayrışıyor mu
+1. "bu klasörde ne var" → balonda "komutunu çalıştırdım" YOK,
+   sonuç cümlesi VAR; meta panelde
+2. Akış sırasında panel sayacı 0.1, 0.2... diye canlı artıyor mu
+3. Ana ekranda yıldızlar + nefes alan başlık var mı
+4. Menü → Ajan izinleri → terminali KAPAT + KAYDET → ajan
+   "izin vermedi" deyip alternatife yönleniyor mu
+5. chmod 777 + KAYDET → write_file onaysız çalışıyor mu
+6. delete_file/move_file onayı diff/uyarı içeriyor mu

@@ -22,6 +22,9 @@ class PrefsStore(private val context: Context) {
         val TEMPERATURE             = floatPreferencesKey("temperature")
         val MAX_TOKENS              = intPreferencesKey("max_tokens")
         val RESPONSE_LANG           = stringPreferencesKey("response_lang") // tr | en | auto
+        val AGENT_PROFILE           = stringPreferencesKey("agent_profile")   // SAFE | STANDARD | FULL
+        val AGENT_PERMS             = stringPreferencesKey("agent_perms")     // virgüllü id listesi
+        val AGENT_CHMOD             = stringPreferencesKey("agent_chmod")     // örn: 755
 
         // Görünüm
         val THEME                   = stringPreferencesKey("theme")        // system | light | dark
@@ -84,6 +87,22 @@ class PrefsStore(private val context: Context) {
 
     val responseLang: Flow<String> = context.redhawkDataStore.data.map { it[Keys.RESPONSE_LANG] ?: "tr" }
     suspend fun setResponseLang(v: String) = context.redhawkDataStore.edit { it[Keys.RESPONSE_LANG] = v }
+
+    // ---- Ajan izinleri
+    val agentProfile: Flow<String> = context.redhawkDataStore.data.map { it[Keys.AGENT_PROFILE] ?: "STANDARD" }
+    suspend fun setAgentProfile(v: String) = context.redhawkDataStore.edit { it[Keys.AGENT_PROFILE] = v }
+
+    val agentPerms: Flow<Set<String>> = context.redhawkDataStore.data.map {
+        it[Keys.AGENT_PERMS]?.split(",")?.map { p -> p.trim() }
+            ?.filter { p -> p.isNotEmpty() }?.toSet()
+            ?: setOf("read", "write", "move", "terminal")
+    }
+    suspend fun setAgentPerms(v: Set<String>) = context.redhawkDataStore.edit {
+        it[Keys.AGENT_PERMS] = v.joinToString(",")
+    }
+
+    val agentChmod: Flow<String> = context.redhawkDataStore.data.map { it[Keys.AGENT_CHMOD] ?: "755" }
+    suspend fun setAgentChmod(v: String) = context.redhawkDataStore.edit { it[Keys.AGENT_CHMOD] = v }
 
     // ---- Görünüm
     val theme: Flow<String> = context.redhawkDataStore.data.map { it[Keys.THEME] ?: "dark" }

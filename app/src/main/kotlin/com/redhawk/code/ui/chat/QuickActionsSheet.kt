@@ -76,6 +76,17 @@ fun QuickActionsSheet(
                 ) { onToggleAgent() }
             }
 
+            Spacer(Modifier.height(10.dp))
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                QuickCard(
+                    title = "Ajan İzinleri",
+                    subtitle = "Araç erişim kontrolü",
+                    icon = Icons.Outlined.AdminPanelSettings,
+                    modifier = Modifier.weight(1f)
+                ) { onPickAction("permissions") }
+            }
+
             Spacer(Modifier.height(20.dp))
 
             // Tasarım & Kod Motorları

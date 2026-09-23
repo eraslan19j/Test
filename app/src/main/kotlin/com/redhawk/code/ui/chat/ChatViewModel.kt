@@ -8,6 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.redhawk.code.agent.AgentTools
 import com.redhawk.code.agent.ToolIntentParser
+import com.redhawk.code.agent.PermissionCatalog
+import com.redhawk.code.agent.PermissionProfile
 import com.redhawk.code.agent.ProjectFiles
 import com.redhawk.code.data.db.MessageEntity
 import com.redhawk.code.data.db.ProviderEntity
@@ -66,6 +68,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private var generationJob: Job? = null
     private var messageCollector: Job? = null
     private var persistJob: Job? = null
+    private var tickJob: Job? = null
     private var stopRequested = false
     private var approvalGate: CompletableDeferred<Boolean>? = null
     // Yanıt dili Türkçe ise İngilizce cümleler balondan panele taşınır (garanti)
@@ -82,6 +85,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private var wasThinking = false
 
     private val uiTick = Channel<Unit>(capacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    // Ajan izinleri (Ajan izinleri ekranı okur/yazar)
+    val agentProfile: StateFlow<PermissionProfile> =
+        prefs.agentProfile.map { s ->
+            runCatching { PermissionProfile.valueOf(s) }
+                .getOrDefault(PermissionProfile.STANDARD)
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, PermissionProfile.STANDARD)
+    val agentPerms: StateFlow<Set<String>> = prefs.agentPerms
+        .stateIn(viewModelScope, SharingStarted.Eagerly,
+            setOf("read", "write", "move", "terminal"))
+    val agentChmod: StateFlow<String> = prefs.agentChmod
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "755")
+
+    fun saveAgentPerms(p: PermissionProfile, e: Set<String>, c: String) =
+        viewModelScope.launch {
+            prefs.setAgentProfile(p.name)
+            prefs.setAgentPerms(e)
+            prefs.setAgentChmod(c.ifBlank { "755" })
+        }
 
     val chats = repo.observeChats()
 
@@ -248,11 +270,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun runAgentTool(chatId: String, tc: ToolCall): String {
         val app = getApplication<Application>()
         val projectUri = runCatching { repo.getChat(chatId)?.projectUri }.getOrNull()
-        if (AgentTools.needsApproval(tc.name)) {
+        // İzin denetimi (Ajan izinleri ekranı — gerçekten çalışır)
+        val need = PermissionCatalog.permissionFor(tc.name)
+        if (need != null) {
+            val allowed = runCatching { prefs.agentPerms.first() }
+                .getOrDefault(setOf("read", "write", "move", "terminal"))
+            if (need !in allowed) {
+                return "Kullanıcı bu araca izin vermedi ('$need' kapalı). " +
+                    "Ajan izinleri ekranından açılabilir. Israr etme, alternatif öner."
+            }
+        }
+        // 777 = soru sormadan otomatik devam
+        val noAsk = runCatching { prefs.agentChmod.first() }.getOrDefault("755") ==
+            PermissionCatalog.FULL_AUTO_CHMOD
+        if (AgentTools.needsApproval(tc.name) && !noAsk) {
+            val previewText = AgentTools.preview(app, projectUri, tc.name, tc.argumentsJson)
             val gate = CompletableDeferred<Boolean>()
             approvalGate = gate
             _state.update {
-                it.copy(pendingApproval = ToolApproval(tc, AgentTools.preview(tc.name, tc.argumentsJson)))
+                it.copy(pendingApproval = ToolApproval(tc, previewText))
             }
             val ok = try {
                 gate.await()
@@ -268,6 +304,18 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
         return withContext(Dispatchers.IO) {
             runCatching { AgentTools.execute(app, projectUri, tc.name, tc.argumentsJson) }
                 .getOrElse { "HATA: araç çalışamadı: ${it.message}" }
+        }
+    }
+
+    /** Akış sırasında geçen süreyi 100ms'de bir UI'a yazar (panel sayacı canlı kalır) */
+    private fun tickStreamingTotal() {
+        val id = streamingMsgId ?: return
+        val now = System.currentTimeMillis()
+        _state.update { st ->
+            val list = st.messages.toMutableList()
+            val idx = list.indexOfFirst { it.id == id }
+            if (idx >= 0) list[idx] = list[idx].copy(totalMs = now - streamingStartedAt)
+            st.copy(messages = list)
         }
     }
 
@@ -403,6 +451,16 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         } catch (_: Throwable) {}
                     }
 
+                    // Canlı süre sayacı: ilk olay gelmese bile panel 0'da takılmaz
+                    tickJob = viewModelScope.launch {
+                        try {
+                            while (true) {
+                                delay(100)
+                                tickStreamingTotal()
+                            }
+                        } catch (_: Throwable) {}
+                    }
+
                     // ---- Ajan döngüsü: model araç çağırdıkça çalıştır, sonucu geri ver ----
                     val convo = all.toMutableList()
                     val tools = if (agentOn) AgentTools.specs else emptyList()
@@ -473,6 +531,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                     _state.update { it.copy(error = t.message) }
                 } finally {
                     persistJob?.cancel()
+                    tickJob?.cancel()
                     // Yarıda kesildiyse onay diyaloğunu da kapat
                     approvalGate?.cancel()
                     approvalGate = null
@@ -636,7 +695,8 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         const val MAX_AGENT_ROUNDS = 5
         const val AGENT_PROMPT =
-            "AJAN MODU: Araçların var: list_files, read_file, write_file (dosyalar), " +
+            "AJAN MODU: Araçların var: list_files, read_file, write_file, delete_file, " +
+            "move_file, chmod_file (dosyalar), " +
             "web_search ve fetch_url (internet). " +
             "ARAÇ ÇAĞIRMA FORMATI (function-calling yoksa bu bloğu aynen yaz): " +
             "<tool name=\"list_files\">{\"path\": \"\"}</tool> " +

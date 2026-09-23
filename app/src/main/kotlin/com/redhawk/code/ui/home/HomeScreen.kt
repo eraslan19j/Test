@@ -74,6 +74,7 @@ fun HomeScreen(
         Modifier.fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        StarfieldBackground(speedMultiplier = 0.7f)
         HomeBackground()
 
         Column(
@@ -105,17 +106,15 @@ fun HomeScreen(
                         )
                     }
                     Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("ReDHawK Code", style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold)
-                        Text("YAPAY ZEKA · AJAN ÇALIŞMA ALANI",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    Spacer(Modifier.weight(1f))
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(20.dp))
+
+            HomeHeader()
+
+            Spacer(Modifier.height(20.dp))
 
             AnimatedVisibility(
                 visible,

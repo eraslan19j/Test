@@ -25,8 +25,18 @@ object TurkishGuard {
     private val SENT_SPLIT = Regex("(?<=[.!?…])\\s+|(?<=[.!?…])[-–—]+\\s*|(?<=\\.)(?=[A-ZÇĞİÖŞÜ])")
     private const val FENCE = "```"
     private val TOOL_TOKEN =
-        Regex("\\b(list_files|read_file|write_file|web_search|fetch_url|run_command)\\b")
+        Regex("\\b(list_files|read_file|write_file|delete_file|move_file|chmod_file|web_search|fetch_url|run_command)\\b")
     private val INLINE_CODE = Regex("`[^`\\n]*`")
+
+    /** Öz-anlatım: "`list_files` komutunu çalıştırdım, ..." (balonda görünmez) */
+    private val META_NOUNS =
+        "(komut\\w*|ara[cç]\\w*|list_files|read_file|write_file|delete_file|move_file|chmod_file|run_command|web_search|fetch_url)"
+    private val META_VERBS =
+        "(çalıştırdım|çalıştırıyorum|çalıştıracağım|çalıştırıldı|kullandım|kullanıyorum|kullanıldı|çağırdım|çağırıyorum|yürüttüm|yürütüyorum)"
+    private val META_PREFIX_TR =
+        Regex("^[^.!?…\\n]{0,80}?$META_NOUNS[^.!?…\\n]{0,30}?$META_VERBS\\s*,\\s*")
+    private val META_FULL_TR =
+        Regex("^[^.!?…\\n]{0,120}?$META_NOUNS[^.!?…\\n]{0,40}?$META_VERBS[\\s.\"”`'!]*$")
 
     /** Küçük modellerin kendi-kendine-konuşma girişleri */
     private val SELF_TALK_START = listOf(
@@ -48,7 +58,8 @@ object TurkishGuard {
         "the current", "current directory", "the directory",
         "in the current", "the path", "for example", "such as",
         "no problem", "checking ", "listing ", "reading ", "searching ",
-        "the response shows", "so we can", "we can summarize"
+        "the response shows", "so we can", "we can summarize",
+        "then ", "i ran ", "i executed "
     )
 
     /** Tek başına İngilizce olan kısa yanıtlar */
@@ -77,7 +88,8 @@ object TurkishGuard {
         "use", "using", "used", "tool", "tools",
         "list", "lists", "listed", "listing", "file", "files",
         "folder", "folders", "directory", "directories",
-        "path", "paths", "empty", "root", "shows", "show", "likely"
+        "path", "paths", "empty", "root", "shows", "show", "likely",
+        "summarize", "summarized", "summary", "ran", "executed"
     )
 
     fun enforce(thinking: String, response: String): Result {
@@ -131,6 +143,22 @@ object TurkishGuard {
             val t = sent.trim()
             if (t.isEmpty()) {
                 sb.append(sent); continue
+            }
+            // Öz-anlatım önce: "komutunu çalıştırdım" balonda görünmez.
+            // (Eşleşme küçük harfte aranır, sıyırma orijinalden yapılır.)
+            val lowTr = t.lowercase()
+            if (META_FULL_TR.matches(lowTr)) {
+                moved.add(t); continue
+            }
+            val metaPrefix = META_PREFIX_TR.find(lowTr)
+            if (metaPrefix != null) {
+                moved.add(t.substring(metaPrefix.range))
+                val rest = t.substring(metaPrefix.range.last + 1).trim()
+                if (rest.isNotEmpty()) {
+                    if (isEnglish(rest)) moved.add(rest)
+                    else { sb.append(rest); sb.append(" ") }
+                }
+                continue
             }
             if (isEnglish(t)) moved.add(t) else sb.append(sent)
         }

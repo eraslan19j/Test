@@ -34,7 +34,7 @@ fun ThinkingPanel(
     thinkingMs: Long,
     isStreaming: Boolean,
     streamState: StreamState = StreamState.Idle,
-    streamSeconds: Long = 0,
+    streamMs: Long = 0,
     toolLabel: String? = null
 ) {
     var outer by remember { mutableStateOf(true) }
@@ -72,7 +72,7 @@ fun ThinkingPanel(
                 Text(header, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f))
                 if (isStreaming) {
-                    Text("$streamSeconds s",
+                    Text("%.1f s".format(java.util.Locale.US, streamMs / 1000.0),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(8.dp))
@@ -144,7 +144,7 @@ fun ThinkingPanel(
                                 )
                                 if (isStreaming) {
                                     Spacer(Modifier.height(8.dp))
-                                    Text("SSE · $streamSeconds sn ·",
+                                    Text("SSE · %.1f sn ·".format(java.util.Locale.US, streamMs / 1000.0),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                                 }
@@ -175,4 +175,5 @@ private fun Dots() {
 }
 
 private fun formatMs(ms: Long): String =
-    if (ms < 1000) "${ms}ms" else String.format("%.1f s", ms / 1000.0)
+    if (ms < 1000) "${ms}ms"
+    else "%.1f s".format(java.util.Locale.US, ms / 1000.0)
