@@ -30,8 +30,8 @@ sealed class LlmEvent {
     data class Error(
         val message: String,
         val cause: Throwable? = null,
-        /** true = kota/hız sınırı → otomatik sağlayıcı geçişi denenebilir */
         val quotaExceeded: Boolean = false
     ) : LlmEvent()
+    data class Usage(val inputTokens: Int, val outputTokens: Int) : LlmEvent()
     object Done : LlmEvent()
 }

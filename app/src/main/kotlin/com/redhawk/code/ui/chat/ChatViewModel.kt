@@ -53,7 +53,14 @@ data class ChatUiState(
     val enabledSkills: Set<String> = emptySet(),
     val agentMode: Boolean = false,
     val pendingApproval: ToolApproval? = null,
-    val projectLabel: String = ""
+    val projectLabel: String = "",
+    val inputTokens: Int = 0,
+    val outputTokens: Int = 0,
+    val totalTokens: Int = 0,
+    val contextUsed: Int = 0,
+    val contextRemaining: Int = 0,
+    val contextWindow: Int = 0,
+    val contextWindowStr: String = ""
 )
 
 class ChatViewModel(app: Application) : AndroidViewModel(app) {
@@ -129,13 +136,25 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     fun switchProvider(p: ProviderEntity) {
         provider = ProviderFactory.create(p)
         val tpl = ProviderCatalog.byBaseUrl(p.baseUrl)
+        val mi = ProviderCatalog.modelInfo[p.model]
+        val ctxWindow = mi?.contextWindow ?: 0
+        val tokenLimit = tpl?.tokenLimit ?: ""
+        val ctxWindowStr = if (ctxWindow > 0) {
+            buildString {
+                if (ctxWindow >= 1_000_000) append("${ctxWindow / 1_000_000} M")
+                else if (ctxWindow >= 1000) append("${ctxWindow / 1000} K")
+                else append(ctxWindow.toString())
+            }
+        } else ""
         _state.update {
             it.copy(
                 currentProvider = p,
                 modelLabel = "${p.displayName} · ${p.model}",
-                tokenLimit = tpl?.tokenLimit ?: "",
+                tokenLimit = tokenLimit,
                 modelReady = true,
-                error = null
+                error = null,
+                contextWindow = ctxWindow,
+                contextWindowStr = ctxWindowStr
             )
         }
         viewModelScope.launch { prefs.setSelectedProvider(p.id) }
@@ -149,11 +168,22 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
             val updated = providerRepo.get(cur.id) ?: return@launch
             provider = ProviderFactory.create(updated)
             val tpl = ProviderCatalog.byBaseUrl(updated.baseUrl)
+            val mi = ProviderCatalog.modelInfo[updated.model]
+            val ctxWindow = mi?.contextWindow ?: 0
+            val ctxWindowStr = if (ctxWindow > 0) {
+                buildString {
+                    if (ctxWindow >= 1_000_000) append("${ctxWindow / 1_000_000} M")
+                    else if (ctxWindow >= 1000) append("${ctxWindow / 1000} K")
+                    else append(ctxWindow.toString())
+                }
+            } else ""
             _state.update {
                 it.copy(
                     currentProvider = updated,
                     modelLabel = "${updated.displayName} · ${updated.model}",
-                    tokenLimit = tpl?.tokenLimit ?: ""
+                    tokenLimit = tpl?.tokenLimit ?: "",
+                    contextWindow = ctxWindow,
+                    contextWindowStr = ctxWindowStr
                 )
             }
         }
@@ -484,18 +514,32 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
                         p.chat(convo, tools, modelId, temp, maxTok).collect { ev ->
                             if (stopRequested) return@collect
                             when (ev) {
-                                is LlmEvent.TextDelta -> {
-                                    streamingRaw.append(ev.text)
-                                    uiTick.trySend(Unit)
-                                }
-                                is LlmEvent.ToolCallRequested -> pendingTool = ev.call
-                                is LlmEvent.Error -> {
-                                    _state.update { it.copy(error = ev.message) }
-                                    aborted = true
-                                    if (ev.quotaExceeded) quotaFailed = true
-                                }
-                                LlmEvent.Done -> {}
-                            }
+                                 is LlmEvent.TextDelta -> {
+                                     streamingRaw.append(ev.text)
+                                     uiTick.trySend(Unit)
+                                 }
+                                 is LlmEvent.ToolCallRequested -> pendingTool = ev.call
+                                 is LlmEvent.Usage -> {
+                                     val ctxWindow = _state.value.contextWindow
+                                     val total = ev.inputTokens + ev.outputTokens
+                                     val remaining = if (ctxWindow > 0) ctxWindow - total else 0
+                                     _state.update {
+                                         it.copy(
+                                             inputTokens = ev.inputTokens,
+                                             outputTokens = ev.outputTokens,
+                                             totalTokens = total,
+                                             contextUsed = total,
+                                             contextRemaining = remaining
+                                         )
+                                     }
+                                 }
+                                 is LlmEvent.Error -> {
+                                     _state.update { it.copy(error = ev.message) }
+                                     aborted = true
+                                     if (ev.quotaExceeded) quotaFailed = true
+                                 }
+                                 LlmEvent.Done -> {}
+                             }
                         }
                         // Metin-içi araç niyeti: function-calling bilmeyen küçük
                         // modeller <tool> / name({...}) yazar — onu da çalıştır.

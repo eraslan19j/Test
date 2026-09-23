@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -21,11 +21,9 @@ import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
 import java.util.concurrent.TimeUnit
 
-class OpenAiCompatProvider(
+class KiloGatewayProvider(
     override val id: String,
-    override val displayName: String,
-    private val baseUrl: String,
-    private val apiKey: String = ""
+    override val displayName: String = "Kilo Gateway"
 ) : LlmProvider {
 
     private val client = OkHttpClient.Builder()
@@ -36,6 +34,8 @@ class OpenAiCompatProvider(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    private val baseUrl = "https://api.kilo.ai/api/gateway"
+
     override fun chat(
         messages: List<ChatMessage>,
         tools: List<ToolSpec>,
@@ -44,35 +44,42 @@ class OpenAiCompatProvider(
         maxTokens: Int
     ): Flow<LlmEvent> = callbackFlow {
         val body = buildBody(messages, tools, model, temperature, maxTokens)
-        val url = baseUrl.trimEnd('/') + "/chat/completions"
+        val url = "$baseUrl/chat/completions"
 
         val reqB = Request.Builder()
             .url(url)
             .post(body.toRequestBody("application/json".toMediaType()))
             .header("Accept", "text/event-stream")
             .header("Content-Type", "application/json")
-
-        if (apiKey.isNotBlank()) reqB.header("Authorization", "Bearer $apiKey")
-        if (baseUrl.contains("openrouter.ai")) {
-            reqB.header("HTTP-Referer", "https://redhawk.code")
-            reqB.header("X-Title", "ReDHawK Code")
-        }
+            .header("Authorization", "Bearer nil")
 
         val listener = object : EventSourceListener() {
-            // Tool call parçaları stream boyunca birikir, finish_reason gelince yayınlanır
             var toolId: String? = null
             var toolName: String? = null
             val toolArgs = StringBuilder()
             var sawToolCall = false
             var gotFirst = false
-            // Düşünme modeli köprüsü: reasoning_content → <think> etiketi
             var thinkOpen = false
             var thinkClosed = false
+            var inputTokens = 0
+            var outputTokens = 0
 
             override fun onEvent(es: EventSource, id: String?, type: String?, data: String) {
                 if (data == "[DONE]") { trySend(LlmEvent.Done); close(); return }
                 gotFirst = true
-                parseChunk(data)?.let { trySend(it) }
+                parseChunk(data)?.let { ev ->
+                    when (ev) {
+                        is LlmEvent.TextDelta -> trySend(ev)
+                        is LlmEvent.ToolCallRequested -> trySend(ev)
+                        is LlmEvent.Usage -> {
+                            inputTokens = ev.inputTokens
+                            outputTokens = ev.outputTokens
+                            trySend(ev)
+                        }
+                        is LlmEvent.Error -> trySend(ev)
+                        LlmEvent.Done -> trySend(LlmEvent.Done)
+                    }
+                }
             }
 
             override fun onFailure(es: EventSource, t: Throwable?, response: Response?) {
@@ -80,18 +87,17 @@ class OpenAiCompatProvider(
                 val bodySnippet = try { response?.body?.string()?.take(200) } catch (_: Throwable) { null }
                 val msg = when {
                     code == 400 -> "İstek geçersiz. Model ID: $model"
-                    code == 401 -> "API anahtarı geçersiz."
-                    code == 402 -> "Kredi yetersiz. Farklı sağlayıcı dene."
-                    code == 403 -> "Bu modele izin yok."
-                    code == 404 -> "Model '$model' bulunamadı. Model listesinden başka seç."
-                    code == 429 -> "Çok fazla istek. 10 sn bekle."
+                    code == 401 -> "Kimlik doğrulama hatası."
+                    code == 402 -> "Kredi yetersiz."
+                    code == 403 -> "Bu modele erişim yok."
+                    code == 404 -> "Model '$model' bulunamadı."
+                    code == 429 -> "Çok fazla istek. Lütfen bekleyin."
                     code in 500..599 -> "Sunucu hatası ($code)."
                     code > 0 -> "HTTP $code: ${bodySnippet ?: "hata"}"
-                    t is java.net.UnknownHostException -> "İnternet yok."
+                    t is java.net.UnknownHostException -> "İnternet bağlantısı yok."
                     t is java.net.SocketTimeoutException -> "Bağlantı zaman aşımı."
-                    else -> t?.message ?: "Bağlantı hatası."
+                    else -> t?.message ?: "Bir hata oluştu."
                 }
-                // Kota/hız sınırı → otomatik sağlayıcı geçişini tetikler
                 val quota = code == 429 || code == 402 || code == 403
                 trySend(LlmEvent.Error(msg, t, quota))
                 trySend(LlmEvent.Done)
@@ -99,24 +105,21 @@ class OpenAiCompatProvider(
             }
 
             override fun onClosed(es: EventSource) {
-                // Hiçbir SSE olayı gelmeden kapandıysa sessiz "…" yerine hata ver.
-                // (Akış bayrağını yok sayan / SSE dışı yanıt veren uçlar.)
                 if (!gotFirst) {
-                    trySend(LlmEvent.Error("Sağlayıcı yanıt akışı başlatamadı. URL ve modeli kontrol et."))
+                    trySend(LlmEvent.Error("Sağlayıcı yanıt vermedi. Tekrar deneyin."))
+                    trySend(LlmEvent.Done)
                 }
-                trySend(LlmEvent.Done); close()
+                close()
             }
 
             private fun parseChunk(data: String): LlmEvent? {
                 return try {
                     val obj = json.parseToJsonElement(data).jsonObject
-                    // Bazı uçlar hatayı 200 + SSE içinde gönderir (OpenRouter vb).
-                    // Yok sayılırsa sessiz "…" olur — hataya çevir.
                     obj["error"]?.let { e ->
                         val emsg = when (e) {
                             is JsonObject -> e["message"]?.jsonPrimitive?.contentOrNull
                                 ?: e.toString().take(200)
-                            is JsonPrimitive -> e.contentOrNull ?: e.toString()
+                            is kotlinx.serialization.json.JsonPrimitive -> e.contentOrNull ?: e.toString()
                             else -> e.toString().take(200)
                         }.ifBlank { "API hatası" }
                         val low = emsg.lowercase()
@@ -136,11 +139,11 @@ class OpenAiCompatProvider(
                         }
                     }
 
+                    obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
                     val choice = obj["choices"]?.jsonArray?.firstOrNull()?.jsonObject ?: return null
                     val finish = choice["finish_reason"]?.jsonPrimitive?.contentOrNull
                     val delta = choice["delta"]?.jsonObject
 
-                    // Tool call parçası mı? (id/name ilk parçada, arguments parça parça gelir)
                     val tc = delta?.get("tool_calls")?.jsonArray?.firstOrNull()?.jsonObject
                     if (tc != null) {
                         sawToolCall = true
@@ -164,16 +167,13 @@ class OpenAiCompatProvider(
                         )
                     }
 
-                    // Düşünme modelleri (DeepSeek R1/QwQ vb): reasoning_content
-                    // gelirse <think> bloğu aç, düşünme panelinde gösterilsin.
-                    // (Yok sayılırsa model dakikalarca "…" gibi görünürdü.)
                     val reasoning = delta?.get("reasoning_content")
                         ?.jsonPrimitive?.contentOrNull
                         ?: delta?.get("reasoning")?.jsonPrimitive?.contentOrNull
                     if (!reasoning.isNullOrEmpty()) {
                         if (!thinkOpen) {
                             thinkOpen = true
-                            trySend(LlmEvent.TextDelta("<think>"))
+                            trySend(LlmEvent.TextDelta(""))
                         }
                         return LlmEvent.TextDelta(reasoning)
                     }
@@ -182,7 +182,7 @@ class OpenAiCompatProvider(
                     if (!content.isNullOrEmpty()) {
                         if (thinkOpen && !thinkClosed) {
                             thinkClosed = true
-                            trySend(LlmEvent.TextDelta("</think>"))
+                            trySend(LlmEvent.TextDelta(""))
                         }
                         return LlmEvent.TextDelta(content)
                     } else {
@@ -194,11 +194,10 @@ class OpenAiCompatProvider(
 
         val es = EventSources.createFactory(client).newEventSource(reqB.build(), listener)
 
-        // İlk token bekçisi: 60 sn sessizlik = zaman aşımı (takılan "…" bitsin)
         val watchdog = launch {
             delay(60_000)
             if (!listener.gotFirst) {
-                trySend(LlmEvent.Error("60 sn içinde yanıt alınamadı. Tekrar dene veya model değiştir."))
+                trySend(LlmEvent.Error("60 saniyede yanıt alınamadı."))
                 trySend(LlmEvent.Done)
                 close()
             }
@@ -213,10 +212,10 @@ class OpenAiCompatProvider(
         temperature: Float,
         maxTokens: Int
     ): String {
-        val root = buildJsonObject {
+        val root = kotlinx.serialization.json.buildJsonObject {
             put("model", model)
             put("stream", true)
-            put("stream_options", buildJsonObject {
+            put("stream_options", kotlinx.serialization.json.buildJsonObject {
                 put("include_usage", true)
             })
             put("temperature", temperature)
@@ -227,7 +226,6 @@ class OpenAiCompatProvider(
                         put("role", m.role.name.lowercase())
                         put("content", m.content)
                         if (m.toolCallId != null) put("tool_call_id", m.toolCallId)
-                        // Ajan turunda asistanın yaptığı çağrılar (bazı uçlar şart koşar)
                         if (m.toolCalls.isNotEmpty()) {
                             putJsonArray("tool_calls") {
                                 m.toolCalls.forEach { tc ->
@@ -253,7 +251,7 @@ class OpenAiCompatProvider(
                             putJsonObject("function") {
                                 put("name", t.name)
                                 put("description", t.description)
-                                put("parameters", Json.parseToJsonElement(t.parametersJsonSchema))
+                                put("parameters", kotlinx.serialization.json.Json.parseToJsonElement(t.parametersJsonSchema))
                             }
                         }
                     }
